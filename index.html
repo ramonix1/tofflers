@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Enterprise — Escritório Virtual</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- ── Header ── -->
+  <header id="header">
+    <div class="logo">Enter<span>prise</span></div>
+    <div class="sep"></div>
+    <div class="user-info">
+      <div class="user-avatar">V</div>
+      <span class="user-name">Você</span>
+      <span class="user-role">Gestor</span>
+    </div>
+    <div class="spacer"></div>
+    <!-- Botão de toggle do board de Sprint -->
+    <button id="sprint-toggle-btn" class="header-sprint-btn" title="Abrir board da sprint">
+      📋 Sprint Board
+    </button>
+    <button id="invite-btn" class="header-sprint-btn header-invite-btn" title="Convidar alguém para o escritório">🔗 Convidar</button>
+    <!-- Controles de mídia (voz / vídeo / tela por proximidade) -->
+    <div class="media-controls" id="media-controls">
+      <button id="mic-toggle-btn"    class="media-btn" title="Ativar microfone" aria-pressed="false">🎤</button>
+      <button id="cam-toggle-btn"    class="media-btn" title="Ativar câmera" aria-pressed="false">📹</button>
+      <button id="screen-toggle-btn" class="media-btn" title="Compartilhar tela" aria-pressed="false">🖥️</button>
+    </div>
+    <div class="clock" id="clock">00:00:00</div>
+  </header>
+
+  <!-- ── Main ── -->
+  <div id="main">
+
+    <!-- Painel Esquerdo: Demandas -->
+    <aside class="side-panel" id="demandas-panel">
+      <div class="panel-title">📋 Demandas</div>
+
+      <!-- Botão + formulário de nova demanda -->
+      <div id="demandas-toolbar">
+        <button id="demandas-add-btn">+ Nova demanda</button>
+      </div>
+
+      <div id="demandas-form">
+        <div class="form-field">
+          <label for="demanda-assunto">Assunto <span class="required">*</span></label>
+          <input id="demanda-assunto" type="text" placeholder="Ex: Implementar login SSO" autocomplete="off" />
+        </div>
+        <div class="form-field">
+          <label for="demanda-prioridade">Prioridade</label>
+          <select id="demanda-prioridade">
+            <option value="baixa">Baixa</option>
+            <option value="media" selected>Média</option>
+            <option value="alta">Alta</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="demanda-link">Link do card (Pipefy)</label>
+          <input id="demanda-link" type="text" placeholder="vincular depois" autocomplete="off" />
+          <span class="field-hint">(integração futura)</span>
+        </div>
+        <div class="form-actions">
+          <button id="demanda-cancelar-btn" class="btn-ghost">Cancelar</button>
+          <button id="demanda-salvar-btn" class="btn-primary">Salvar</button>
+        </div>
+      </div>
+
+      <div id="demandas-list">
+        <!-- cards injetados via demandas.js -->
+      </div>
+    </aside>
+
+    <!-- Centro: Canvas -->
+    <div id="canvas-wrapper">
+      <canvas id="office-canvas"></canvas>
+
+      <!-- Tiles de vídeo/tela de quem está na sua bolha (injetados via rtc.js) -->
+      <div id="video-strip"></div>
+
+      <!-- Dica de controles -->
+      <div id="controls-hint">
+        Mover: <strong>WASD</strong> ou <strong>↑↓←→</strong>
+        &nbsp;·&nbsp; Use o canal <strong>🔊 Local</strong> para falar com quem está perto
+      </div>
+
+      <!-- Card de Reunião (aparece quando entra na sala) -->
+      <div id="meeting-card">
+        <h3>🗓 Sala de Reunião</h3>
+
+        <div class="meeting-types">
+          <button class="meeting-type-btn active" data-type="Daily">Daily</button>
+          <button class="meeting-type-btn" data-type="Sprint Planning">Sprint</button>
+          <button class="meeting-type-btn" data-type="Entrega">Entrega</button>
+        </div>
+
+        <button id="meeting-start-btn">▶ Iniciar reunião</button>
+
+        <div id="meeting-info">
+          <div id="meeting-timer">00:00</div>
+          <div id="meeting-participants">Participantes: —</div>
+        </div>
+      </div>
+
+      <!-- Sprint Board (overlay, toggled via header button) -->
+      <div id="sprint-panel">
+        <div class="sprint-panel-header">
+          <div>
+            <div class="sprint-panel-title" id="sprint-titulo">Sprint 1 — aguardando</div>
+          </div>
+          <div class="sprint-panel-actions">
+            <button id="sprint-planning-btn" class="btn-accent" title="Selecionar demandas e iniciar sprint">🗂 Planning</button>
+            <button id="sprint-daily-btn"    class="btn-ghost"  title="Rodar daily" disabled>☀️ Daily</button>
+            <button id="sprint-encerrar-btn" class="btn-danger" title="Encerrar sprint" disabled>🏁 Encerrar</button>
+          </div>
+        </div>
+
+        <!-- Contadores -->
+        <div class="sprint-counters">
+          <span class="sprint-counter">To Do: <strong id="sprint-count-todo">0</strong></span>
+          <span class="sprint-counter">Doing: <strong id="sprint-count-doing">0</strong></span>
+          <span class="sprint-counter done">Done: <strong id="sprint-count-done">0</strong></span>
+        </div>
+
+        <!-- Board de colunas -->
+        <div id="sprint-board">
+          <div class="board-column" id="board-col-todo">
+            <div class="board-column-header todo">To Do</div>
+          </div>
+          <div class="board-column" id="board-col-doing">
+            <div class="board-column-header doing">Doing</div>
+          </div>
+          <div class="board-column" id="board-col-done">
+            <div class="board-column-header done">Done</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal: Sprint Planning -->
+      <div id="sprint-planning-modal">
+        <div class="sprint-modal-box">
+          <h3>🗂 Sprint Planning — Sprint <span id="sprint-modal-num">1</span></h3>
+          <div class="form-field">
+            <label for="sprint-objetivo-input">Objetivo da sprint</label>
+            <input id="sprint-objetivo-input" type="text" placeholder="Ex: Entregar módulo de pagamentos" autocomplete="off" />
+          </div>
+          <div class="form-field">
+            <label>Selecione as demandas do backlog:</label>
+            <div id="sprint-planning-lista" class="sprint-planning-lista">
+              <!-- injetado via sprint.js -->
+            </div>
+          </div>
+          <div class="form-actions">
+            <button id="sprint-modal-cancelar" class="btn-ghost">Cancelar</button>
+            <button id="sprint-modal-iniciar"  class="btn-accent">🚀 Iniciar Sprint</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /canvas-wrapper -->
+
+    <!-- Painel Direito: Chat -->
+    <aside class="side-panel right" id="chat-panel-wrap">
+      <div class="panel-title">💬 Chat</div>
+
+      <div id="chat-panel">
+        <!-- Abas -->
+        <div class="chat-tabs" id="chat-tabs">
+          <div class="chat-tab active" data-channel="geral">Geral</div>
+          <div class="chat-tab" data-channel="local">🔊 Local</div>
+          <!-- DMs injetadas via chat.js -->
+        </div>
+
+        <!-- Mensagens -->
+        <div class="chat-messages" id="chat-messages"></div>
+
+        <!-- Input -->
+        <div class="chat-input-area">
+          <input id="chat-input" type="text" placeholder="Mensagem…" autocomplete="off" />
+          <button id="chat-send-btn">↵</button>
+        </div>
+      </div>
+    </aside>
+
+  </div><!-- /main -->
+
+  <!-- Toast de notificação -->
+  <div id="toast"></div>
+
+  <!-- Modal: Convidar -->
+  <div id="invite-modal" class="invite-modal-backdrop">
+    <div class="invite-modal-box">
+      <div class="invite-modal-header">
+        <h3>🔗 Convidar para o escritório</h3>
+        <button id="invite-modal-close" class="invite-close-btn" title="Fechar">✕</button>
+      </div>
+
+      <!-- Estado: gerando -->
+      <div id="invite-state-loading" class="invite-state">
+        <div class="invite-spinner"></div>
+        <p class="invite-status-text">Gerando link seguro…</p>
+      </div>
+
+      <!-- Estado: pronto -->
+      <div id="invite-state-ready" class="invite-state" style="display:none">
+        <p class="invite-hint">Envie este link para a pessoa. Enquanto o escritório estiver aberto, ela entra por aqui.</p>
+        <div class="invite-url-row">
+          <input id="invite-url-input" type="text" readonly class="invite-url-input" />
+          <button id="invite-copy-btn" class="btn-primary invite-copy-btn">Copiar</button>
+        </div>
+        <button id="invite-stop-btn" class="btn-ghost invite-stop-btn">Parar de compartilhar</button>
+      </div>
+
+      <!-- Estado: erro -->
+      <div id="invite-state-error" class="invite-state" style="display:none">
+        <p class="invite-error-icon">⚠️</p>
+        <p id="invite-error-msg" class="invite-error-text"></p>
+        <p class="invite-error-fallback">Como alternativa, rode <code>./compartilhar-enterprise.sh</code> no terminal.</p>
+        <button id="invite-retry-btn" class="btn-ghost">Tentar novamente</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap da aplicação (ES modules) -->
+  <script type="module" src="js/main.js"></script>
+  <script type="module" src="js/invite.js"></script>
+
+
+  <!-- Tela de entrada (overlay) -->
+  <div id="entry-screen">
+    <div id="entry-box">
+      <div class="entry-logo">Enter<span>prise</span></div>
+      <div class="entry-subtitle">Escritório Virtual Multiplayer</div>
+      <div class="entry-form">
+        <div class="form-field">
+          <label for="entry-name">Seu nome</label>
+          <input id="entry-name" type="text" placeholder="Ex: João Silva" autocomplete="off" maxlength="32" />
+        </div>
+        <div class="form-field">
+          <label for="entry-role">Papel</label>
+          <select id="entry-role">
+            <option value="Gestor">Gestor</option>
+            <option value="Líder">Líder</option>
+            <option value="Dev" selected>Dev</option>
+            <option value="Testador">Testador</option>
+            <option value="Analista">Analista</option>
+          </select>
+        </div>
+        <button id="entry-btn" class="btn-primary entry-btn">Entrar →</button>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

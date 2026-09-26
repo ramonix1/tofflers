@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Enterprise
+GenericName=Escritório Virtual
+Comment=Escritório virtual da equipe — sprints, chat e reuniões
+Exec=/home/itarget/enterprise/abrir-enterprise.sh
+Icon=/home/itarget/enterprise/static/icone.png
+Terminal=false
+Categories=Office;
+Keywords=escritorio;sprint;equipe;scrum;enterprise;
+StartupNotify=true
