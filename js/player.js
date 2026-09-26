@@ -1,5 +1,5 @@
 /**
- * player.js — Controle do avatar do jogador.
+ * player.js — Controle do avatar do jogador local.
  * WASD + teclas de seta, colisão com o mapa, movimento suave.
  */
 
@@ -11,14 +11,16 @@ const AVATAR_RADIUS = 10;
 
 export class Player extends Avatar {
   /**
-   * @param {string} [name='Você'] — nome do jogador (preenchido após o join)
+   * @param {string} [name='Você']   — nome do jogador
    * @param {string} [role='Gestor'] — papel do jogador
+   * @param {string} [skin='golden'] — pelagem escolhida
    */
-  constructor(name = 'Você', role = 'Gestor') {
+  constructor(name = 'Você', role = 'Gestor', skin = 'golden') {
     super({
       id: 'player',
       name,
       role,
+      skin,
       x: 4 * 32 + 16, // posição inicial: entrada da recepção
       y: 3 * 32 + 16,
       isPlayer: true,
@@ -55,7 +57,7 @@ export class Player extends Avatar {
   update(dt) {
     super.update(dt);
 
-    const dtS = dt / 1000; // converte para segundos
+    const dtS = dt / 1000;
     let dx = 0;
     let dy = 0;
 
@@ -68,6 +70,9 @@ export class Player extends Avatar {
     this._bobActive = moving;
 
     if (!moving) return;
+
+    // Atualiza direção de facing a partir do vetor de movimento
+    this.setFacingFromVector(dx, dy);
 
     // Normaliza diagonal
     if (dx !== 0 && dy !== 0) {

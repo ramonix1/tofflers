@@ -2,54 +2,56 @@
  * main.js — Bootstrap + game loop principal (requestAnimationFrame).
  *
  * Ordem de inicialização:
- *   1. Canvas dimensionado ao mapa
- *   2. Tela de entrada (ou auto-join por query string)
+ *   1. Canvas dimensionado ao mapa isométrico (CANVAS_W × CANVAS_H de iso.js)
+ *   2. Tela de entrada com seletor de pelagem (ou auto-join por query string)
  *   3. Após entrar: conecta WebSocket, instancia Player, Chat, etc.
- *   4. Inicia game loop
+ *   4. Inicia game loop com render isométrico + painter's algorithm
  */
 
-import { MAP_W, MAP_H, renderOffice, getZoneAt } from './office.js';
-import { Player }         from './player.js';
+import { MAP_W, MAP_H, getZoneAt } from './office.js';
+import { CANVAS_W, CANVAS_H, worldToScreen, worldDepthKey } from './iso.js';
+import { renderOfficeIso }          from './office-iso.js';
+import { Player }                   from './player.js';
 import { Avatar, ROLE_COLORS, ROLE_ICONS } from './avatar.js';
-import { Chat }           from './chat.js';
-import { MeetingManager } from './meetings.js';
-import { DemandasPanel }  from './demandas.js';
-import { SprintManager }  from './sprint.js';
-import { Net }            from './net.js';
-import { RtcManager }     from './rtc.js';
+import { Chat }                     from './chat.js';
+import { MeetingManager }           from './meetings.js';
+import { DemandasPanel }            from './demandas.js';
+import { SprintManager }            from './sprint.js';
+import { Net }                      from './net.js';
+import { RtcManager }               from './rtc.js';
 import { AUDIO_RADIUS, distance, gainForDistance } from './spatial.js';
 
-// ── Canvas setup ─────────────────────────────────────────────────────────────
+// ── Canvas setup (isométrico) ─────────────────────────────────────────────────
 
 const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById('office-canvas'));
 const ctx    = canvas.getContext('2d');
 
-canvas.width  = MAP_W; // 800
-canvas.height = MAP_H; // 576
+// Canvas maior para acomodar a projeção isométrica do mapa 25×18
+canvas.width  = CANVAS_W; // ~1376
+canvas.height = CANVAS_H; // ~888
 
-// ── Net (instanciado antes de qualquer coisa) ─────────────────────────────────
+// ── Net ───────────────────────────────────────────────────────────────────────
 
 const net = new Net();
 
-// ── Instâncias (criadas antes do join pois o DOM já está pronto) ──────────────
+// ── Instâncias ────────────────────────────────────────────────────────────────
 
 const chat     = new Chat(net);
 const demandas = new DemandasPanel(chat);
 const sprint   = new SprintManager(chat, demandas);
 const meeting  = new MeetingManager(chat, sprint);
 
-// Injeta net nas instâncias que precisam sincronizar via servidor
 demandas.setNet(net);
 sprint.setNet(net);
 
-// ── Estado dos jogadores remotos ─────────────────────────────────────────────
+// ── Estado dos jogadores remotos ──────────────────────────────────────────────
 
 /** @type {Map<string, Avatar>} */
 const remotePlayers = new Map();
 
 /**
  * Cria um Avatar para um jogador remoto.
- * @param {{id:string, name:string, role:string, x:number, y:number}} p
+ * @param {{id:string, name:string, role:string, x:number, y:number, skin?:string}} p
  * @returns {Avatar}
  */
 function makeRemoteAvatar(p) {
@@ -57,17 +59,18 @@ function makeRemoteAvatar(p) {
     id:       p.id,
     name:     p.name,
     role:     p.role || 'Dev',
+    skin:     p.skin || 'golden',
     x:        p.x   || MAP_W / 2,
     y:        p.y   || MAP_H / 2,
     isPlayer: false,
   });
 }
 
-// ── Jogador local (criado com placeholder; nome/papel atualizados no join) ────
+// ── Jogador local ─────────────────────────────────────────────────────────────
 
-let player = null; // criado após o join para ter nome/papel corretos
+let player = null; // criado após o join para ter nome/papel/skin corretos
 
-// ── Áudio/vídeo/tela por proximidade (WebRTC) ─────────────────────────────────
+// ── WebRTC por proximidade ─────────────────────────────────────────────────────
 
 const mediaButtons = {
   mic:    document.getElementById('mic-toggle-btn'),
@@ -97,7 +100,7 @@ mediaButtons.screen && mediaButtons.screen.addEventListener('click', () => rtc.t
 
 net.onSignal = (from, data) => rtc.handleSignal(from, data);
 
-// ── Relógio ──────────────────────────────────────────────────────────────────
+// ── Relógio ───────────────────────────────────────────────────────────────────
 
 const clockEl = document.getElementById('clock');
 function updateClock() {
@@ -106,61 +109,94 @@ function updateClock() {
 updateClock();
 setInterval(updateClock, 1000);
 
-// ── Raio de proximidade ──────────────────────────────────────────────────────
+// ── Raio de proximidade ───────────────────────────────────────────────────────
 
-// Raio visual da bolha = mesmo raio do áudio/chat Local (js/spatial.js).
 const PROXIMITY_RADIUS = AUDIO_RADIUS;
 
-// ── Render ───────────────────────────────────────────────────────────────────
+// ── Render (painter's algorithm) ──────────────────────────────────────────────
 
 function render() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+  // Fundo escuro
   ctx.fillStyle = '#0f1117';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  renderOffice(ctx);
+  // Piso (passada separada — sem depth issue)
+  // + zonas coloridas iso + objetos do cenário em painter's order
+  renderOfficeIso(ctx);
 
+  // ── Avatares intercalados com objetos (painter's algorithm) ──────────────
+  // Coletamos todos os avatares e os ordenamos por profundidade.
+  // Nota: os objetos do cenário já foram desenhados por renderOfficeIso;
+  // aqui só precisamos que os AVATARES sejam desenhados na ordem certa entre si
+  // (e sobre o piso/objetos que já estão abaixo deles).
+  // Para um painter completo incluindo objetos, seria necessário integrar
+  // getSceneObjects() — isso é indicado como melhoria futura na documentação.
+
+  /** @type {Array<Avatar>} */
+  const avatarsToDraw = [];
+  for (const remote of remotePlayers.values()) {
+    avatarsToDraw.push(remote);
+  }
+  if (player) avatarsToDraw.push(player);
+
+  // Ordena por profundidade (col + row do mundo) crescente → fundo primeiro
+  avatarsToDraw.sort((a, b) => a.depthKey - b.depthKey);
+
+  for (const av of avatarsToDraw) {
+    av.render(ctx);
+  }
+
+  // ── Círculo de proximidade do jogador local ───────────────────────────────
   if (player) {
-    // Círculo de proximidade ao redor do jogador (alcance do canal Local)
+    // Converte o raio de mundo para uma escala aproximada em tela iso
+    // (projeção simplificada: o raio no eixo Y de mundo ≈ raio_tela * cos30)
+    const { sx: cx, sy: cy } = worldToScreen(player.x, player.y);
+    const screenRadius = PROXIMITY_RADIUS * 0.5; // aproximação visual
     ctx.beginPath();
-    ctx.arc(player.x, player.y, PROXIMITY_RADIUS, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(99,102,241,0.08)';
+    ctx.ellipse(cx, cy, screenRadius, screenRadius * 0.5, 0, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(99,102,241,0.10)';
     ctx.lineWidth = 2;
     ctx.setLineDash([5, 8]);
     ctx.stroke();
     ctx.setLineDash([]);
   }
-
-  // Jogadores remotos
-  for (const remote of remotePlayers.values()) {
-    remote.render(ctx);
-  }
-
-  // Jogador local (por cima)
-  if (player) {
-    player.render(ctx);
-  }
 }
 
-// ── Interpolação de remotos ──────────────────────────────────────────────────
+// ── Interpolação de remotos ───────────────────────────────────────────────────
 
 /** Destinos de interpolação: Map(id → {tx, ty}) */
 const remoteTargets = new Map();
 
+/** Posições anteriores para derivar direção de facing dos remotos */
+const remotePrev = new Map();
+
 function interpolateRemotes(dt) {
-  const LERP = 1 - Math.pow(1 - 0.2, dt / 16); // ~0.2 a 60fps
+  const LERP = 1 - Math.pow(1 - 0.2, dt / 16);
   for (const [id, avatar] of remotePlayers) {
     const target = remoteTargets.get(id);
     if (!target) continue;
+
+    const prevX = avatar.x;
+    const prevY = avatar.y;
+
     avatar.x += (target.x - avatar.x) * LERP;
     avatar.y += (target.y - avatar.y) * LERP;
+
     const dist = Math.hypot(target.x - avatar.x, target.y - avatar.y);
     avatar._bobActive = dist > 1;
+
+    // Atualiza facing a partir do vetor de deslocamento
+    const dx = avatar.x - prevX;
+    const dy = avatar.y - prevY;
+    if (Math.abs(dx) > 0.2 || Math.abs(dy) > 0.2) {
+      avatar.setFacingFromVector(dx, dy);
+    }
   }
 }
 
-// ── Game loop ────────────────────────────────────────────────────────────────
+// ── Game loop ─────────────────────────────────────────────────────────────────
 
 let lastTime = 0;
 let loopStarted = false;
@@ -172,15 +208,14 @@ function loop(timestamp) {
   if (player) {
     player.update(dt);
 
-    // Envia move se mudou
+    // Envia move se mudou (dir continua como 'move'/'idle' para compatibilidade)
     const dir = player._bobActive ? 'move' : 'idle';
     net.sendMove(player.x, player.y, dir);
   }
 
   interpolateRemotes(dt);
 
-  // Audibilidade por proximidade/sala → volume espacial + conexões WebRTC.
-  // Mesma sala = volume cheio; senão, falloff gradual pela distância (bolha).
+  // Audibilidade por proximidade/sala → WebRTC
   if (player) {
     const myZone = getZoneAt(player.x, player.y);
     const gains = new Map();
@@ -217,15 +252,12 @@ window.addEventListener('keydown', (e) => {
 // ── Callbacks Net ─────────────────────────────────────────────────────────────
 
 net.onWelcome = (data) => {
-  // Posiciona o jogador LOCAL no spawn que o servidor atribuiu (espalhado),
-  // senão todos os locais nascem no mesmo ponto padrão e ficam empilhados.
   const me = (data.players || []).find(p => p.id === net.youId);
   if (me && player) {
     player.x = me.x;
     player.y = me.y;
   }
 
-  // Popula remotePlayers com jogadores já online (exceto eu)
   for (const p of (data.players || [])) {
     if (p.id === net.youId) continue;
     const avatar = makeRemoteAvatar(p);
@@ -234,16 +266,12 @@ net.onWelcome = (data) => {
     chat.registerRemotePlayer(p);
   }
 
-  // Carrega histórico de chat
   const chatState = data.state && data.state.chat;
   if (chatState) {
-    // Histórico geral
     for (const msg of (chatState.geral || [])) {
       chat.receiveHistoryMsg('geral', msg);
     }
-    // DMs
     for (const [key, msgs] of Object.entries(chatState.dm || {})) {
-      // key = 'idA|idB' — só renderiza se diz respeito a mim
       const ids = key.split('|');
       if (!ids.includes(net.youId)) continue;
       const otherId = ids.find(id => id !== net.youId);
@@ -285,12 +313,12 @@ net.onPlayerLeave = (id) => {
   }
   remotePlayers.delete(id);
   remoteTargets.delete(id);
+  remotePrev.delete(id);
   chat.unregisterRemotePlayer(id);
   rtc.closePeer(id);
 };
 
 net.onChat = (msg) => {
-  // Balão de fala no canal Local — mostra acima do avatar do remetente
   if (msg.channel === 'local') {
     const isMe = msg.from === net.youId;
     if (isMe && player) {
@@ -306,7 +334,7 @@ net.onChat = (msg) => {
 // ── Tela de entrada ───────────────────────────────────────────────────────────
 
 /**
- * Sanitiza string de entrada: trim + strip tags básico.
+ * Sanitiza string de entrada.
  * @param {string} s
  * @returns {string}
  */
@@ -314,28 +342,42 @@ function sanitize(s) {
   return (s || '').trim().replace(/[<>"']/g, '').slice(0, 32);
 }
 
-/**
- * Papéis válidos aceitos pelo servidor.
- */
 const VALID_ROLES = ['Gestor', 'Líder', 'Dev', 'Testador', 'Analista'];
+const VALID_SKINS = ['golden', 'chocolate', 'grey', 'black', 'cream'];
+
+/** Lê a skin salva no localStorage (fallback: 'golden'). */
+function getSavedSkin() {
+  try {
+    const s = localStorage.getItem('enterprise_skin');
+    return VALID_SKINS.includes(s) ? s : 'golden';
+  } catch { return 'golden'; }
+}
+
+/** Salva a skin escolhida no localStorage. */
+function saveSkin(skin) {
+  try { localStorage.setItem('enterprise_skin', skin); } catch {}
+}
+
+/** Skin selecionada na tela de entrada */
+let selectedSkin = getSavedSkin();
 
 /**
- * Inicia o escritório com nome e papel definidos.
+ * Inicia o escritório com nome, papel e skin definidos.
  * @param {string} name
  * @param {string} role
+ * @param {string} skin
  */
-function startOffice(name, role) {
-  // Cria o jogador local com nome/papel
-  player = new Player(name, role);
+function startOffice(name, role, skin) {
+  saveSkin(skin);
+  player = new Player(name, role, skin);
 
   // Atualiza header
-  const userNameEl = document.querySelector('.user-name');
-  const userRoleEl = document.querySelector('.user-role');
+  const userNameEl   = document.querySelector('.user-name');
+  const userRoleEl   = document.querySelector('.user-role');
   const userAvatarEl = document.querySelector('.user-avatar');
   if (userNameEl) userNameEl.textContent = name;
   if (userRoleEl) {
     userRoleEl.textContent = role;
-    // Aplica cor do papel ao badge
     const roleColors = {
       'Gestor':   'rgba(168,85,247,0.15)',
       'Líder':    'rgba(124,58,237,0.15)',
@@ -365,23 +407,17 @@ function startOffice(name, role) {
     userAvatarEl.style.background = ROLE_COLORS_MAP[role] || '#6366f1';
   }
 
-  // Conecta WebSocket e entra
   net.connect();
-  net.join(name, role);
+  net.join(name, role, skin);
 
-  // Registra meeting com player (sem NPCs)
   meeting.registerEntities(player);
 
-  // Inicia o game loop (apenas uma vez)
   if (!loopStarted) {
     loopStarted = true;
     requestAnimationFrame(loop);
   }
 }
 
-/**
- * Esconde a tela de entrada.
- */
 function hideEntryScreen() {
   const screen = document.getElementById('entry-screen');
   if (!screen) return;
@@ -389,18 +425,70 @@ function hideEntryScreen() {
   setTimeout(() => { screen.style.display = 'none'; }, 300);
 }
 
+// ── Inicializa seletor de skin na tela de entrada ─────────────────────────────
+
+function initSkinSelector() {
+  const container = document.getElementById('skin-selector');
+  if (!container) return;
+
+  const skins = [
+    { id: 'golden',    label: 'Golden' },
+    { id: 'chocolate', label: 'Chocolate' },
+    { id: 'grey',      label: 'Cinza' },
+    { id: 'black',     label: 'Escuro' },
+    { id: 'cream',     label: 'Creme' },
+  ];
+
+  for (const sk of skins) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'skin-btn' + (sk.id === selectedSkin ? ' selected' : '');
+    btn.dataset.skin = sk.id;
+    btn.title = sk.label;
+
+    // Miniatura: imagem do spritesheet (frame 0, direção down)
+    const img = document.createElement('img');
+    img.src = `assets/chars/variants/${sk.id}.png`;
+    // Mostra apenas o primeiro frame (32×32 do spritesheet 512×64)
+    img.style.cssText = `
+      width: 32px; height: 32px;
+      object-fit: none;
+      object-position: 0 0;
+      image-rendering: pixelated;
+    `;
+    img.alt = sk.label;
+
+    const lbl = document.createElement('span');
+    lbl.textContent = sk.label;
+
+    btn.appendChild(img);
+    btn.appendChild(lbl);
+
+    btn.addEventListener('click', () => {
+      selectedSkin = sk.id;
+      // Atualiza estado visual de todos os botões
+      container.querySelectorAll('.skin-btn').forEach(b => {
+        b.classList.toggle('selected', b.dataset.skin === selectedSkin);
+      });
+    });
+
+    container.appendChild(btn);
+  }
+}
+
 // ── Auto-join via query string ────────────────────────────────────────────────
 
 const params = new URLSearchParams(location.search);
-const qName = sanitize(params.get('name') || '');
-const qRole = sanitize(params.get('role') || '');
+const qName  = sanitize(params.get('name') || '');
+const qRole  = sanitize(params.get('role') || '');
+const qSkin  = VALID_SKINS.includes(params.get('skin')) ? params.get('skin') : null;
 
 if (qName && VALID_ROLES.includes(qRole)) {
-  // Pula o overlay
   hideEntryScreen();
-  startOffice(qName, qRole);
+  startOffice(qName, qRole, qSkin || getSavedSkin());
 } else {
-  // Mostra o overlay e espera o usuário preencher
+  initSkinSelector();
+
   const entryBtn  = document.getElementById('entry-btn');
   const entryName = document.getElementById('entry-name');
   const entryRole = document.getElementById('entry-role');
@@ -415,7 +503,7 @@ if (qName && VALID_ROLES.includes(qRole)) {
       return;
     }
     hideEntryScreen();
-    startOffice(name, role);
+    startOffice(name, role, selectedSkin);
   }
 
   entryBtn.addEventListener('click', doJoin);
@@ -423,10 +511,9 @@ if (qName && VALID_ROLES.includes(qRole)) {
     if (e.key === 'Enter') doJoin();
   });
 
-  // Foco automático no campo de nome
   entryName.focus();
 
-  // Roda o loop mas sem player (renderiza o mapa vazio aguardando)
+  // Roda o loop (renderiza mapa vazio enquanto aguarda)
   if (!loopStarted) {
     loopStarted = true;
     requestAnimationFrame(loop);

@@ -1306,3 +1306,50 @@ body {
 .remote-you-badge {
   color: rgba(255,255,255,0.5);
 }
+
+/* ── Canvas isométrico — scroll horizontal quando tela estreita ── */
+#canvas-wrapper {
+  overflow: auto;
+}
+
+/* ── Seletor de pelagem (skin) na tela de entrada ── */
+.skin-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.skin-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 6px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-card);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  flex: 1;
+  min-width: 56px;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.skin-btn img {
+  display: block;
+}
+
+.skin-btn:hover {
+  border-color: var(--accent);
+  background: rgba(99,102,241,0.08);
+  color: var(--text-primary);
+}
+
+.skin-btn.selected {
+  border-color: var(--accent);
+  background: rgba(99,102,241,0.15);
+  color: var(--accent);
+  font-weight: 600;
+}

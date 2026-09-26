@@ -157,12 +157,13 @@ export class Net {
   // ── API pública ──────────────────────────────────────────────────────────────
 
   /**
-   * Entra no escritório com nome e papel.
+   * Entra no escritório com nome, papel e pelagem.
    * @param {string} name
    * @param {string} role
+   * @param {string} [skin='golden'] — pelagem do cão ('golden'|'chocolate'|'grey'|'black'|'cream')
    */
-  join(name, role) {
-    this._sendRaw({ t: 'join', name, role });
+  join(name, role, skin = 'golden') {
+    this._sendRaw({ t: 'join', name, role, skin });
   }
 
   /**
