@@ -125,6 +125,8 @@ body {
   flex: 1;
   display: flex;
   overflow: hidden;
+  min-width: 0;
+  min-height: 0;
 }
 
 /* ── Painéis laterais ── */
@@ -163,12 +165,18 @@ body {
   background: var(--bg-base);
   position: relative;
   overflow: hidden;
+  /* Garante que item flex encolha abaixo do tamanho do conteúdo (evita bug mobile) */
+  min-width: 0;
+  min-height: 0;
 }
 
 #office-canvas {
   display: block;
   border-radius: 4px;
   image-rendering: pixelated;
+  /* O canvas ocupa 100% do wrapper; JS ajusta o bitmap via resizeCanvas() */
+  width: 100%;
+  height: 100%;
 }
 
 /* overlay de controles */
@@ -1307,9 +1315,9 @@ body {
   color: rgba(255,255,255,0.5);
 }
 
-/* ── Canvas isométrico — scroll horizontal quando tela estreita ── */
+/* ── Canvas isométrico — sem scroll; o bitmap é redimensionado pelo JS ── */
 #canvas-wrapper {
-  overflow: auto;
+  overflow: hidden;
 }
 
 /* ── Seletor de pelagem (skin) na tela de entrada ── */
@@ -1352,6 +1360,48 @@ body {
   background: rgba(99,102,241,0.15);
   color: var(--accent);
   font-weight: 600;
+}
+
+/* ── Controles mobile de câmera/zoom (canto superior-direito, touch) ──────── */
+#mobile-cam-controls {
+  position: fixed;
+  top: calc(var(--header-h) + 10px + env(safe-area-inset-top, 0px));
+  right: calc(10px + env(safe-area-inset-right, 0px));
+  flex-direction: column;
+  gap: 6px;
+  z-index: 51;
+  /* Oculto em desktop por padrão; media queries mobile sobrepõem com display:flex */
+  display: none;
+}
+
+.mob-cam-btn {
+  width: 42px;
+  height: 42px;
+  background: rgba(15,17,23,0.80);
+  border: 2px solid rgba(99,102,241,0.55);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 18px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  backdrop-filter: blur(4px);
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.mob-cam-btn:active {
+  background: rgba(99,102,241,0.45);
+  border-color: var(--accent);
+}
+
+.mob-cam-btn.active {
+  border-color: var(--accent);
+  background: rgba(99,102,241,0.25);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -1477,6 +1527,10 @@ body {
   #run-btn {
     opacity: 1;
     pointer-events: auto;
+  }
+
+  #mobile-cam-controls {
+    display: flex;
   }
 }
 
@@ -1711,6 +1765,11 @@ body {
 
   #office-canvas {
     touch-action: none;
+  }
+
+  /* Exibe controles mobile de câmera/zoom */
+  #mobile-cam-controls {
+    display: flex;
   }
 }
 

@@ -31,21 +31,55 @@ import { registerPlayerGetter }     from './mobile-controls.js';
 // Injeta o módulo de layout no office.js (collidesWithMap e getZoneAt passam a usar o modelo)
 injectLayoutModule(LayoutModule);
 
-// ── Canvas setup (isométrico) ─────────────────────────────────────────────────
+// ── Canvas setup (viewport-driven) ───────────────────────────────────────────
 
 const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById('office-canvas'));
 const ctx    = canvas.getContext('2d');
 
-// Canvas maior para acomodar a projeção isométrica do mapa 25×18
-canvas.width  = CANVAS_W; // ~1376
-canvas.height = CANVAS_H; // ~888
+/** Wrapper do canvas (div que contém o canvas) */
+const canvasWrapper = document.getElementById('canvas-wrapper');
+
+/**
+ * Devicepixelratio atual. Capturado uma vez; reavaliado no resize via resizeCanvas.
+ * @type {number}
+ */
+let _dpr = window.devicePixelRatio || 1;
+
+/**
+ * Dimensões lógicas do canvas (pontos CSS, sem DPR).
+ * Atualizadas por resizeCanvas(); usadas pelo render para cálculos de câmera.
+ */
+let _logicalW = 0;
+let _logicalH = 0;
+
+/**
+ * Redimensiona o bitmap do canvas para cobrir o wrapper visível,
+ * respeitando o devicePixelRatio para nitidez em telas HiDPI.
+ * Deve ser chamado no load e em todo resize/orientationchange.
+ */
+function resizeCanvas() {
+  _dpr = window.devicePixelRatio || 1;
+  const lw = canvasWrapper.clientWidth  || window.innerWidth;
+  const lh = canvasWrapper.clientHeight || window.innerHeight;
+  if (lw === _logicalW && lh === _logicalH) return; // sem mudança
+  _logicalW = lw;
+  _logicalH = lh;
+  canvas.width  = Math.round(lw * _dpr);
+  canvas.height = Math.round(lh * _dpr);
+  // style é controlado pelo CSS (width:100%; height:100%)
+}
+
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+// Orientação e mudanças de teclado virtual no mobile
+window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 200));
 
 // ── Câmera ────────────────────────────────────────────────────────────────────
 
 /**
  * Modos de câmera:
- *   'follow' — viewport centraliza no jogador; canvas se move via ctx.translate
- *   'full'   — mapa inteiro visível, escalonado para caber na viewport
+ *   'follow' — viewport centraliza no jogador; câmera se move via ctx.translate
+ *   'full'   — mapa inteiro visível, escalonado para caber na viewport via ctx.scale
  *
  * ┌─ CONSTANTES DE AJUSTE DE CÂMERA ──────────────────────────────────────────┐
  * │  CAMERA_LERP  — suavização da câmera em modo follow (0=imediato, 1=fixo)  │
@@ -58,7 +92,7 @@ let camX = CANVAS_W / 2;
 let camY = CANVAS_H / 2;
 
 /**
- * Zoom por scroll do mouse.
+ * Zoom por scroll do mouse / pinça.
  * ┌─ CONSTANTES DE AJUSTE DE ZOOM ────────────────────────────────────────────┐
  * │  ZOOM_MIN / ZOOM_MAX — limites do zoom (1 = tamanho natural).              │
  * │  ZOOM_STEP           — quanto cada "clique" do scroll altera o zoom.       │
@@ -77,33 +111,23 @@ let cameraMode = (() => {
   try { return localStorage.getItem('enterprise_camera') || 'follow'; } catch { return 'follow'; }
 })();
 
-/** Wrapper do canvas (div que contém o canvas) */
-const canvasWrapper = document.getElementById('canvas-wrapper');
-
 /** Overlay de diagnóstico ligado/desligado */
 let debugOverlay = false;
 
 /**
- * Aplica o modo de câmera atual ao container e canvas.
- * Em modo 'follow': canvas fica no tamanho natural; a câmera se move via translate.
- * Em modo 'full':   canvas é escalonado via CSS para caber na viewport.
+ * Aplica o modo de câmera.
+ * Agora o redimensionamento é feito via bitmap (resizeCanvas); não há mais
+ * manipulação de CSS transform no canvas. Esta função apenas sincroniza o
+ * botão do header (rótulo) e os controles mobile.
  */
 function applyCameraMode() {
-  if (cameraMode === 'follow') {
-    canvas.style.transform = '';
-    canvas.style.transformOrigin = '';
-    canvas.style.width  = '';
-    canvas.style.height = '';
-  } else {
-    // Escala CSS para caber na área visível do wrapper
-    const ww = canvasWrapper.clientWidth  || 800;
-    const wh = canvasWrapper.clientHeight || 600;
-    const scale = Math.min(ww / CANVAS_W, wh / CANVAS_H, 1);
-    canvas.style.width  = `${CANVAS_W * scale}px`;
-    canvas.style.height = `${CANVAS_H * scale}px`;
-    canvas.style.transform = '';
-    canvas.style.transformOrigin = 'top left';
-  }
+  // Garante que o canvas não tenha transform CSS residual de versão anterior
+  canvas.style.transform = '';
+  canvas.style.width  = '';
+  canvas.style.height = '';
+  // Sincroniza rótulo do botão de câmera mobile
+  const mbtn = document.getElementById('mob-cam-toggle');
+  if (mbtn) mbtn.textContent = cameraMode === 'follow' ? '🎥' : '🗺️';
 }
 
 applyCameraMode();
@@ -139,12 +163,84 @@ function injectCameraToggleBtn() {
 
 injectCameraToggleBtn();
 
+/**
+ * Injeta cluster de controles mobile (zoom ＋/− e câmera) no canto superior-direito.
+ * Só afeta mobile (CSS já garante display:none em desktop).
+ */
+function injectMobileCamControls() {
+  if (document.getElementById('mobile-cam-controls')) return;
+
+  const wrap = document.createElement('div');
+  wrap.id = 'mobile-cam-controls';
+
+  // Botão câmera toggle (follow ↔ full)
+  const camBtn = document.createElement('button');
+  camBtn.id = 'mob-cam-toggle';
+  camBtn.className = 'mob-cam-btn';
+  camBtn.title = 'Alternar câmera: seguir / mapa inteiro';
+  camBtn.textContent = cameraMode === 'follow' ? '🎥' : '🗺️';
+  camBtn.addEventListener('click', () => {
+    cameraMode = cameraMode === 'follow' ? 'full' : 'follow';
+    camBtn.textContent = cameraMode === 'follow' ? '🎥' : '🗺️';
+    try { localStorage.setItem('enterprise_camera', cameraMode); } catch {}
+    const hBtn = document.getElementById('camera-toggle-btn');
+    if (hBtn) hBtn.textContent = cameraMode === 'follow' ? '🎥 Câmera' : '🗺️ Mapa';
+    applyCameraMode();
+  });
+
+  // Botão zoom +
+  const zoomIn = document.createElement('button');
+  zoomIn.id = 'mob-zoom-in';
+  zoomIn.className = 'mob-cam-btn';
+  zoomIn.title = 'Aumentar zoom';
+  zoomIn.textContent = '＋';
+  zoomIn.addEventListener('click', () => {
+    if (cameraMode !== 'follow') {
+      cameraMode = 'follow';
+      camBtn.textContent = '🎥';
+      const hBtn = document.getElementById('camera-toggle-btn');
+      if (hBtn) hBtn.textContent = '🎥 Câmera';
+      try { localStorage.setItem('enterprise_camera', 'follow'); } catch {}
+      applyCameraMode();
+    }
+    zoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoom + ZOOM_STEP));
+    try { localStorage.setItem('enterprise_zoom', String(zoom)); } catch {}
+  });
+
+  // Botão zoom −
+  const zoomOut = document.createElement('button');
+  zoomOut.id = 'mob-zoom-out';
+  zoomOut.className = 'mob-cam-btn';
+  zoomOut.title = 'Diminuir zoom';
+  zoomOut.textContent = '−';
+  zoomOut.addEventListener('click', () => {
+    if (cameraMode !== 'follow') {
+      cameraMode = 'follow';
+      camBtn.textContent = '🎥';
+      const hBtn = document.getElementById('camera-toggle-btn');
+      if (hBtn) hBtn.textContent = '🎥 Câmera';
+      try { localStorage.setItem('enterprise_camera', 'follow'); } catch {}
+      applyCameraMode();
+    }
+    zoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoom - ZOOM_STEP));
+    try { localStorage.setItem('enterprise_zoom', String(zoom)); } catch {}
+  });
+
+  wrap.appendChild(camBtn);
+  wrap.appendChild(zoomIn);
+  wrap.appendChild(zoomOut);
+  // Insere no body (posição fixed, não depende do DOM pai)
+  document.body.appendChild(wrap);
+}
+
+injectMobileCamControls();
+
 // ── Zoom pelo scroll do mouse ─────────────────────────────────────────────────
 
 canvas.addEventListener('wheel', (e) => {
   e.preventDefault();
   // Zoom só tem efeito no modo 'follow' (transform via ctx). Se estiver em
-  // 'full' (mapa inteiro via CSS), rolar o scroll leva de volta ao follow.
+  // 'full' (mapa inteiro), rolar o scroll leva de volta ao follow.
   if (cameraMode !== 'follow') {
     cameraMode = 'follow';
     applyCameraMode();
@@ -155,6 +251,62 @@ canvas.addEventListener('wheel', (e) => {
   const dir = e.deltaY < 0 ? 1 : -1; // scroll p/ cima = aproxima
   zoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoom + dir * ZOOM_STEP));
   try { localStorage.setItem('enterprise_zoom', String(zoom)); } catch {}
+}, { passive: false });
+
+// ── Pinch-to-zoom (dois toques no canvas) ────────────────────────────────────
+
+/**
+ * Distância inicial entre os dois dedos ao começar a pinça.
+ * @type {number|null}
+ */
+let _pinchDist0 = null;
+/**
+ * Zoom capturado no início da pinça.
+ * @type {number}
+ */
+let _pinchZoom0 = 1;
+
+canvas.addEventListener('touchstart', (e) => {
+  if (e.touches.length === 2) {
+    e.preventDefault();
+    const t = e.touches;
+    _pinchDist0 = Math.hypot(t[1].clientX - t[0].clientX, t[1].clientY - t[0].clientY);
+    _pinchZoom0 = zoom;
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchmove', (e) => {
+  if (e.touches.length === 2 && _pinchDist0 !== null) {
+    e.preventDefault();
+    const t = e.touches;
+    const dist = Math.hypot(t[1].clientX - t[0].clientX, t[1].clientY - t[0].clientY);
+    const ratio = dist / _pinchDist0;
+    const newZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, _pinchZoom0 * ratio));
+
+    // Muda para follow se estiver em full
+    if (cameraMode !== 'follow') {
+      cameraMode = 'follow';
+      applyCameraMode();
+      const b = document.getElementById('camera-toggle-btn');
+      if (b) b.textContent = '🎥 Câmera';
+      const mb = document.getElementById('mob-cam-toggle');
+      if (mb) mb.textContent = '🎥';
+      try { localStorage.setItem('enterprise_camera', 'follow'); } catch {}
+    }
+
+    zoom = newZoom;
+    try { localStorage.setItem('enterprise_zoom', String(zoom)); } catch {}
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchend', (e) => {
+  if (e.touches.length < 2) {
+    _pinchDist0 = null;
+  }
+}, { passive: false });
+
+canvas.addEventListener('touchcancel', () => {
+  _pinchDist0 = null;
 }, { passive: false });
 
 // ── Net ───────────────────────────────────────────────────────────────────────
@@ -246,6 +398,11 @@ const PROXIMITY_RADIUS = AUDIO_RADIUS;
 // ── Render (painter's algorithm) ──────────────────────────────────────────────
 
 function render() {
+  // Dimensões lógicas do canvas (sem DPR) — usadas para câmera e interface
+  const vw = _logicalW || canvasWrapper.clientWidth  || 800;
+  const vh = _logicalH || canvasWrapper.clientHeight || 600;
+  const dpr = _dpr;
+
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   // Fundo escuro
@@ -254,26 +411,32 @@ function render() {
 
   ctx.save();
 
+  // Aplica escala DPR: todas as coordenadas abaixo usam pontos CSS lógicos
+  ctx.scale(dpr, dpr);
+
   // ── Câmera ──────────────────────────────────────────────────────────────────
   if (cameraMode === 'follow' && player) {
     // Ponto focal: posição do jogador em tela iso
     const { sx: targetX, sy: targetY } = worldToScreen(player.x, player.y);
 
-    // Viewport: dimensões da área visível do wrapper
-    const vw = canvasWrapper.clientWidth  || 800;
-    const vh = canvasWrapper.clientHeight || 600;
-
     // Suaviza o ponto focal (segue o jogador com lerp)
     camX += (targetX - camX) * CAMERA_LERP;
     camY += (targetY - camY) * CAMERA_LERP;
 
-    // Transform: centro da viewport → escala do zoom → desloca para o foco.
-    // Assim o zoom acontece em torno do personagem e o canvas o segue.
+    // Transform: centro da viewport lógica → escala do zoom → desloca para o foco.
+    // Usa vw/vh (lógico), que já reflete o tamanho real do canvas no celular.
     ctx.translate(vw / 2, vh / 2);
     ctx.scale(zoom, zoom);
     ctx.translate(-camX, -camY);
+  } else if (cameraMode === 'full') {
+    // Mapa inteiro: escala para caber na viewport lógica, centralizado
+    const scale = Math.min(vw / CANVAS_W, vh / CANVAS_H, 1);
+    const offX = (vw  - CANVAS_W * scale) / 2;
+    const offY = (vh - CANVAS_H * scale) / 2;
+    ctx.translate(offX, offY);
+    ctx.scale(scale, scale);
   }
-  // Em modo 'full': sem translate; o CSS já escalou o canvas para caber
+  // Em modo 'follow' sem player: sem translate (mapa estático centralizado)
 
   // Piso + zonas coloridas iso + objetos do cenário em painter's order
   renderOfficeIso(ctx);
