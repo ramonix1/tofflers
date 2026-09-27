@@ -18,7 +18,7 @@ import { MAP, ZONES, TILE, COLS, ROWS } from './office.js';
 import { getLayout } from './layout.js';
 import {
   TW, TH, ORIGIN_X, ORIGIN_Y,
-  WALL_SPRITE_H, WALL_FOOT_OFFSET, FLOOR_FILL_SCALE,
+  WALL_SPRITE_H, WALL_FOOT_OFFSET, FLOOR_FILL_SCALE, FLOOR_TOP_ADJUST,
   worldToScreen, depthKey,
 } from './iso.js';
 
@@ -194,18 +194,22 @@ function tileScreen(col, row) {
  * @param {number} sy  — topo do losango em tela
  * @param {number} [scale=1]
  */
+// Y (dentro do PNG 64×64 da Kenney) onde começa a área OPACA do piso (medido: 13).
+// Usado para ancorar o TOPO do losango do piso na ponta superior da célula.
+const FLOOR_OPAQUE_TOP = 13;
+
 function drawFloorSprite(ctx, spriteName, sx, sy, scale = 1) {
   const image = img(spriteName);
   if (!image.complete || image.naturalWidth === 0) return;
-  // Centro do losango do piso NA CÉLULA (independe do fator de preenchimento),
-  // igual ao anterior: sy - h/2 + TH/2 com o sprite natural.
-  const cx = sx;
-  const cy = sy - image.naturalHeight * scale / 2 + TH / 2;
   // Escala de preenchimento fecha os vãos entre tiles (piso é preview 3D com padding).
   const s = scale * FLOOR_FILL_SCALE;
   const w = image.naturalWidth  * s;
   const h = image.naturalHeight * s;
-  ctx.drawImage(image, cx - w / 2, cy - h / 2, w, h);
+  // Ancora o TOPO do losango do piso na ponta superior da célula (sx, sy):
+  //  - horizontal: opaco é centrado no sprite → centra em sx (sx - w/2).
+  //  - vertical: pixel FLOOR_OPAQUE_TOP do sprite cai em sy (+ ajuste fino).
+  // Mesma referência do highlight do editor e do pé dos objetos → tudo alinhado.
+  ctx.drawImage(image, sx - w / 2, sy - FLOOR_OPAQUE_TOP * s + FLOOR_TOP_ADJUST, w, h);
 }
 
 /**

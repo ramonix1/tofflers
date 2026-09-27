@@ -2065,8 +2065,23 @@
       },
       {
         "floor": "floor",
-        "solid": true,
-        "object": "structure"
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
       },
       {
         "floor": "floor",
@@ -2090,11 +2105,6 @@
       },
       {
         "floor": "floor",
-        "solid": true,
-        "object": "structure"
-      },
-      {
-        "floor": "floor",
         "solid": false,
         "object": null
       },
@@ -2102,16 +2112,6 @@
         "floor": "floor",
         "solid": false,
         "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "structure"
       },
       {
         "floor": "floor",
@@ -2187,8 +2187,63 @@
       },
       {
         "floor": "floor",
-        "solid": true,
-        "object": "wall"
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor-corner",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
       },
       {
         "floor": "floor",
@@ -2196,64 +2251,9 @@
         "object": "wall"
       },
       {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
+        "floor": "floor-corner",
+        "solid": false,
+        "object": null
       },
       {
         "floor": "floor",

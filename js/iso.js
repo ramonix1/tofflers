@@ -45,6 +45,16 @@ export const TH = 32;  // altura do losango (TW/2 para proporção 2:1)
  */
 export const FLOOR_FILL_SCALE = 1.32;
 
+/**
+ * FLOOR_TOP_ADJUST — ajuste fino VERTICAL do piso (px de tela).
+ * O piso é ancorado com o TOPO do losango na ponta superior da célula (sx, sy),
+ * a mesma referência do highlight do editor e do pé dos objetos — assim o clique
+ * do editor cai na célula certa e o piso fica SOB avatares/objetos (sem flutuar).
+ * Se o piso ficar um pouco alto/baixo em relação aos bonecos, ajuste aqui
+ * (positivo = desce, negativo = sobe).
+ */
+export const FLOOR_TOP_ADJUST = 0;
+
 // ── Tamanho do tile de mundo (importado de office.js, mas replicado aqui para clareza)
 export const WORLD_TILE = 32; // px no espaço de mundo
 
