@@ -54,6 +54,11 @@ export class RtcManager {
 
     /** @type {AudioContext|null} */
     this.audioCtx = null;
+
+    /** Z-index incremental para trazer tiles arrastados para a frente. */
+    this._tileZ = 200;
+    /** Contador para escalonar a posição inicial de novos tiles. */
+    this._tileSpawnN = 0;
   }
 
   /** ID do jogador local (só existe após o welcome). */
@@ -406,6 +411,7 @@ export class RtcManager {
       wrap.appendChild(video);
       wrap.appendChild(label);
       this.videoStrip.appendChild(wrap);
+      this._makeTileInteractive(wrap, kind);
       tile = { wrap, video, label, kind };
       peer.tiles.set(key, tile);
     }
@@ -443,6 +449,7 @@ export class RtcManager {
       wrap.appendChild(video);
       wrap.appendChild(label);
       this.videoStrip.appendChild(wrap);
+      this._makeTileInteractive(wrap, kind);
       tile = { wrap, video };
       this._selfTiles[kind] = tile;
     }
@@ -452,5 +459,125 @@ export class RtcManager {
   _removeSelfTile(kind) {
     const tile = this._selfTiles[kind];
     if (tile) { tile.wrap.remove(); this._selfTiles[kind] = null; }
+  }
+
+  // ── Tiles flutuantes: arrastar, redimensionar e maximizar ───────────────────
+
+  /** Injeta (uma vez) os estilos dos tiles flutuantes/alças. */
+  _ensureTileStyles() {
+    if (document.getElementById('rtc-tile-styles')) return;
+    const st = document.createElement('style');
+    st.id = 'rtc-tile-styles';
+    st.textContent = `
+      .video-tile.floating { position: fixed; margin: 0; cursor: grab; touch-action: none; }
+      .video-tile.floating:active { cursor: grabbing; }
+      .video-tile .tile-bar {
+        position: absolute; top: 0; left: 0; right: 0; height: 22px; z-index: 2;
+        display: flex; align-items: center; justify-content: flex-end; gap: 4px;
+        padding: 2px 4px; cursor: grab;
+        background: linear-gradient(rgba(0,0,0,0.6), transparent);
+        opacity: 0; transition: opacity 0.15s;
+      }
+      .video-tile.floating:hover .tile-bar { opacity: 1; }
+      .video-tile .tile-btn {
+        min-width: 18px; height: 18px; line-height: 16px; text-align: center;
+        font-size: 12px; color: #fff; background: rgba(255,255,255,0.18);
+        border-radius: 4px; cursor: pointer; user-select: none;
+      }
+      .video-tile .tile-btn:hover { background: rgba(255,255,255,0.4); }
+      .video-tile .tile-resize {
+        position: absolute; right: 0; bottom: 0; width: 20px; height: 20px;
+        cursor: nwse-resize; z-index: 3; touch-action: none;
+        background: linear-gradient(135deg, transparent 45%, rgba(255,255,255,0.55) 45%, rgba(255,255,255,0.55) 60%, transparent 60%);
+      }
+    `;
+    document.head.appendChild(st);
+  }
+
+  /**
+   * Torna um tile de vídeo/tela FLUTUANTE: pode ser arrastado para qualquer lugar,
+   * redimensionado pela alça inferior-direita e maximizado (apresentação).
+   * @param {HTMLElement} wrap — o `.video-tile`
+   * @param {'cam'|'screen'} kind
+   */
+  _makeTileInteractive(wrap, kind) {
+    this._ensureTileStyles();
+    wrap.classList.add('floating');
+
+    // Tamanho e posição inicial (escalonados p/ não empilhar). Tela maior.
+    const w0 = kind === 'screen' ? 440 : 240;
+    const n = this._tileSpawnN++;
+    const vw = window.innerWidth, vh = window.innerHeight;
+    wrap.style.width = w0 + 'px';
+    wrap.style.left  = Math.max(12, vw - w0 - 24 - (n % 4) * 26) + 'px';
+    wrap.style.top   = (72 + (n % 6) * 26) + 'px';
+    const bringFront = () => { wrap.style.zIndex = String(++this._tileZ); };
+    bringFront();
+
+    // Barra superior (arraste + botão maximizar/apresentar)
+    const bar = document.createElement('div');
+    bar.className = 'tile-bar';
+    const btnMax = document.createElement('div');
+    btnMax.className = 'tile-btn';
+    btnMax.textContent = '⛶';
+    btnMax.title = 'Maximizar / apresentar (duplo-clique também)';
+    bar.appendChild(btnMax);
+    wrap.appendChild(bar);
+
+    // Alça de redimensionamento
+    const rh = document.createElement('div');
+    rh.className = 'tile-resize';
+    rh.title = 'Arraste para redimensionar';
+    wrap.appendChild(rh);
+
+    // ── Arrastar (corpo do tile e barra; ignora alça e botão) ──
+    wrap.addEventListener('pointerdown', (e) => {
+      if (e.target === rh || e.target === btnMax) return;
+      e.preventDefault();
+      bringFront();
+      const r = wrap.getBoundingClientRect();
+      const offX = e.clientX - r.left, offY = e.clientY - r.top;
+      const move = (ev) => {
+        const maxL = window.innerWidth - 50, maxT = window.innerHeight - 28;
+        wrap.style.left = Math.min(maxL, Math.max(-r.width + 60, ev.clientX - offX)) + 'px';
+        wrap.style.top  = Math.min(maxT, Math.max(0, ev.clientY - offY)) + 'px';
+      };
+      const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); };
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', up);
+    });
+
+    // ── Redimensionar (mantém proporção do vídeo via height:auto do CSS) ──
+    rh.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      bringFront();
+      const startW = wrap.getBoundingClientRect().width;
+      const startX = e.clientX;
+      const move = (ev) => {
+        const nw = Math.max(140, Math.min(window.innerWidth * 0.95, startW + (ev.clientX - startX)));
+        wrap.style.width = nw + 'px';
+      };
+      const up = () => { window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up); };
+      window.addEventListener('pointermove', move);
+      window.addEventListener('pointerup', up);
+    });
+
+    // ── Maximizar / apresentar (toggle) ──
+    let saved = null;
+    const toggleMax = () => {
+      if (saved) {
+        wrap.style.left = saved.left; wrap.style.top = saved.top; wrap.style.width = saved.width;
+        saved = null;
+      } else {
+        saved = { left: wrap.style.left, top: wrap.style.top, width: wrap.style.width };
+        const bw = Math.min(window.innerWidth * 0.82, 1100);
+        wrap.style.width = bw + 'px';
+        wrap.style.left  = ((window.innerWidth - bw) / 2) + 'px';
+        wrap.style.top   = '64px';
+        bringFront();
+      }
+    };
+    btnMax.addEventListener('click', (e) => { e.stopPropagation(); toggleMax(); });
+    wrap.addEventListener('dblclick', (e) => { if (e.target !== rh && e.target !== btnMax) toggleMax(); });
   }
 }
