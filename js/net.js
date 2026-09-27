@@ -17,6 +17,7 @@ export class Net {
     this.onDemandas   = null; // (demandas: array) => void
     this.onSprint     = null; // (sprint: object) => void
     this.onSignal     = null; // (from: string, data: object) => void  — sinalização WebRTC
+    this.onLayout     = null; // (layout: object) => void              — layout unificado
 
     /** @type {WebSocket|null} */
     this._ws = null;
@@ -137,6 +138,9 @@ export class Net {
         break;
       case 'rtc_signal':
         if (this.onSignal) this.onSignal(msg.from, msg.data);
+        break;
+      case 'layout':
+        if (this.onLayout) this.onLayout(msg.layout);
         break;
     }
   }

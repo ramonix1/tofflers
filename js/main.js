@@ -6,11 +6,17 @@
  *   2. Tela de entrada com seletor de pelagem (ou auto-join por query string)
  *   3. Após entrar: conecta WebSocket, instancia Player, Chat, etc.
  *   4. Inicia game loop com render isométrico + painter's algorithm
+ *
+ * Novidades do Estágio 1:
+ *   - Layout unificado derivado do servidor (layout.js)
+ *   - Câmera com toggle: seguir jogador ↔ mapa inteiro
+ *   - Overlay de diagnóstico (Tab ou botão)
  */
 
-import { MAP_W, MAP_H, getZoneAt } from './office.js';
+import { MAP_W, MAP_H, getZoneAt, injectLayoutModule } from './office.js';
 import { CANVAS_W, CANVAS_H, worldToScreen, worldDepthKey } from './iso.js';
-import { renderOfficeIso }          from './office-iso.js';
+import { renderOfficeIso, renderDebugOverlay } from './office-iso.js';
+import * as LayoutModule from './layout.js';
 import { Player }                   from './player.js';
 import { Avatar, ROLE_COLORS, ROLE_ICONS } from './avatar.js';
 import { Chat }                     from './chat.js';
@@ -21,6 +27,9 @@ import { Net }                      from './net.js';
 import { RtcManager }               from './rtc.js';
 import { AUDIO_RADIUS, distance, gainForDistance } from './spatial.js';
 
+// Injeta o módulo de layout no office.js (collidesWithMap e getZoneAt passam a usar o modelo)
+injectLayoutModule(LayoutModule);
+
 // ── Canvas setup (isométrico) ─────────────────────────────────────────────────
 
 const canvas = /** @type {HTMLCanvasElement} */ (document.getElementById('office-canvas'));
@@ -29,6 +38,90 @@ const ctx    = canvas.getContext('2d');
 // Canvas maior para acomodar a projeção isométrica do mapa 25×18
 canvas.width  = CANVAS_W; // ~1376
 canvas.height = CANVAS_H; // ~888
+
+// ── Câmera ────────────────────────────────────────────────────────────────────
+
+/**
+ * Modos de câmera:
+ *   'follow' — viewport centraliza no jogador; canvas se move via ctx.translate
+ *   'full'   — mapa inteiro visível, escalonado para caber na viewport
+ *
+ * ┌─ CONSTANTES DE AJUSTE DE CÂMERA ──────────────────────────────────────────┐
+ * │  CAMERA_LERP  — suavização da câmera em modo follow (0=imediato, 1=fixo)  │
+ * └───────────────────────────────────────────────────────────────────────────┘
+ */
+const CAMERA_LERP = 0.1; // suavização da câmera (10% por frame ≈ movimento fluido)
+
+/** Posição atual da câmera (tela → canvas) em modo follow */
+let camX = CANVAS_W / 2;
+let camY = CANVAS_H / 2;
+
+/** Modo de câmera atual */
+let cameraMode = (() => {
+  try { return localStorage.getItem('enterprise_camera') || 'follow'; } catch { return 'follow'; }
+})();
+
+/** Wrapper do canvas (div que contém o canvas) */
+const canvasWrapper = document.getElementById('canvas-wrapper');
+
+/** Overlay de diagnóstico ligado/desligado */
+let debugOverlay = false;
+
+/**
+ * Aplica o modo de câmera atual ao container e canvas.
+ * Em modo 'follow': canvas fica no tamanho natural; a câmera se move via translate.
+ * Em modo 'full':   canvas é escalonado via CSS para caber na viewport.
+ */
+function applyCameraMode() {
+  if (cameraMode === 'follow') {
+    canvas.style.transform = '';
+    canvas.style.transformOrigin = '';
+    canvas.style.width  = '';
+    canvas.style.height = '';
+  } else {
+    // Escala CSS para caber na área visível do wrapper
+    const ww = canvasWrapper.clientWidth  || 800;
+    const wh = canvasWrapper.clientHeight || 600;
+    const scale = Math.min(ww / CANVAS_W, wh / CANVAS_H, 1);
+    canvas.style.width  = `${CANVAS_W * scale}px`;
+    canvas.style.height = `${CANVAS_H * scale}px`;
+    canvas.style.transform = '';
+    canvas.style.transformOrigin = 'top left';
+  }
+}
+
+applyCameraMode();
+window.addEventListener('resize', applyCameraMode);
+
+// ── Botão de toggle de câmera ─────────────────────────────────────────────────
+
+function injectCameraToggleBtn() {
+  const header = document.getElementById('header');
+  if (!header || document.getElementById('camera-toggle-btn')) return;
+
+  const btn = document.createElement('button');
+  btn.id = 'camera-toggle-btn';
+  btn.className = 'header-sprint-btn';
+  btn.title = 'Alternar câmera: seguir jogador / mapa inteiro';
+  btn.textContent = cameraMode === 'follow' ? '🎥 Câmera' : '🗺️ Mapa';
+
+  btn.addEventListener('click', () => {
+    cameraMode = cameraMode === 'follow' ? 'full' : 'follow';
+    btn.textContent = cameraMode === 'follow' ? '🎥 Câmera' : '🗺️ Mapa';
+    try { localStorage.setItem('enterprise_camera', cameraMode); } catch {}
+    applyCameraMode();
+  });
+
+  // Insere antes do botão de sprint
+  const sprintBtn = document.getElementById('sprint-toggle-btn');
+  if (sprintBtn) {
+    header.insertBefore(btn, sprintBtn);
+  } else {
+    header.appendChild(btn);
+  }
+}
+
+injectCameraToggleBtn();
 
 // ── Net ───────────────────────────────────────────────────────────────────────
 
@@ -122,18 +215,44 @@ function render() {
   ctx.fillStyle = '#0f1117';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Piso (passada separada — sem depth issue)
-  // + zonas coloridas iso + objetos do cenário em painter's order
+  ctx.save();
+
+  // ── Câmera ──────────────────────────────────────────────────────────────────
+  if (cameraMode === 'follow' && player) {
+    // Centraliza o canvas no jogador suavemente
+    const { sx: targetX, sy: targetY } = worldToScreen(player.x, player.y);
+
+    // Viewport: dimensões da área visível do wrapper
+    const vw = canvasWrapper.clientWidth  || 800;
+    const vh = canvasWrapper.clientHeight || 600;
+
+    // Destino da câmera: translação para centralizar o jogador na viewport
+    const desiredCamX = vw / 2 - targetX;
+    const desiredCamY = vh / 2 - targetY;
+
+    // Suavização por lerp
+    camX += (desiredCamX - camX) * CAMERA_LERP;
+    camY += (desiredCamY - camY) * CAMERA_LERP;
+
+    // Limita a câmera para não mostrar área fora do canvas
+    const minCamX = Math.min(0, vw - CANVAS_W);
+    const minCamY = Math.min(0, vh - CANVAS_H);
+    camX = Math.max(minCamX, Math.min(0, camX));
+    camY = Math.max(minCamY, Math.min(0, camY));
+
+    ctx.translate(camX, camY);
+  }
+  // Em modo 'full': sem translate; o CSS já escalou o canvas para caber
+
+  // Piso + zonas coloridas iso + objetos do cenário em painter's order
   renderOfficeIso(ctx);
 
-  // ── Avatares intercalados com objetos (painter's algorithm) ──────────────
-  // Coletamos todos os avatares e os ordenamos por profundidade.
-  // Nota: os objetos do cenário já foram desenhados por renderOfficeIso;
-  // aqui só precisamos que os AVATARES sejam desenhados na ordem certa entre si
-  // (e sobre o piso/objetos que já estão abaixo deles).
-  // Para um painter completo incluindo objetos, seria necessário integrar
-  // getSceneObjects() — isso é indicado como melhoria futura na documentação.
+  // Overlay de diagnóstico (liga/desliga com Tab)
+  if (debugOverlay) {
+    renderDebugOverlay(ctx);
+  }
 
+  // ── Avatares intercalados com objetos (painter's algorithm) ──────────────
   /** @type {Array<Avatar>} */
   const avatarsToDraw = [];
   for (const remote of remotePlayers.values()) {
@@ -150,10 +269,8 @@ function render() {
 
   // ── Círculo de proximidade do jogador local ───────────────────────────────
   if (player) {
-    // Converte o raio de mundo para uma escala aproximada em tela iso
-    // (projeção simplificada: o raio no eixo Y de mundo ≈ raio_tela * cos30)
     const { sx: cx, sy: cy } = worldToScreen(player.x, player.y);
-    const screenRadius = PROXIMITY_RADIUS * 0.5; // aproximação visual
+    const screenRadius = PROXIMITY_RADIUS * 0.5;
     ctx.beginPath();
     ctx.ellipse(cx, cy, screenRadius, screenRadius * 0.5, 0, 0, Math.PI * 2);
     ctx.strokeStyle = 'rgba(99,102,241,0.10)';
@@ -162,6 +279,8 @@ function render() {
     ctx.stroke();
     ctx.setLineDash([]);
   }
+
+  ctx.restore();
 }
 
 // ── Interpolação de remotos ───────────────────────────────────────────────────
@@ -247,11 +366,22 @@ window.addEventListener('keydown', (e) => {
   if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) {
     e.preventDefault();
   }
+
+  // Tab: toggle do overlay de diagnóstico
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    debugOverlay = !debugOverlay;
+  }
 });
 
 // ── Callbacks Net ─────────────────────────────────────────────────────────────
 
 net.onWelcome = (data) => {
+  // Aplica layout recebido do servidor
+  if (data.layout) {
+    LayoutModule.applyLayout(data.layout);
+  }
+
   const me = (data.players || []).find(p => p.id === net.youId);
   if (me && player) {
     player.x = me.x;
@@ -329,6 +459,12 @@ net.onChat = (msg) => {
     }
   }
   chat.receiveNetMsg(msg, net.youId);
+};
+
+// ── Handler de layout recebido do servidor (broadcast após edição) ────────────
+
+net.onLayout = (layout) => {
+  LayoutModule.applyLayout(layout);
 };
 
 // ── Tela de entrada ───────────────────────────────────────────────────────────
@@ -447,21 +583,21 @@ function initSkinSelector() {
     btn.title = sk.label;
 
     // Miniatura: imagem do spritesheet (frame 0, direção down)
-    const img = document.createElement('img');
-    img.src = `assets/chars/variants/${sk.id}.png`;
+    const imgEl = document.createElement('img');
+    imgEl.src = `assets/chars/variants/${sk.id}.png`;
     // Mostra apenas o primeiro frame (32×32 do spritesheet 512×64)
-    img.style.cssText = `
+    imgEl.style.cssText = `
       width: 32px; height: 32px;
       object-fit: none;
       object-position: 0 0;
       image-rendering: pixelated;
     `;
-    img.alt = sk.label;
+    imgEl.alt = sk.label;
 
     const lbl = document.createElement('span');
     lbl.textContent = sk.label;
 
-    btn.appendChild(img);
+    btn.appendChild(imgEl);
     btn.appendChild(lbl);
 
     btn.addEventListener('click', () => {

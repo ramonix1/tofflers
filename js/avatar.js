@@ -130,6 +130,9 @@ export class Avatar {
     this._frameTimer = 0;      // acumulador de tempo (ms)
     this._frameIdx   = 0;      // índice 0-3 do frame atual
 
+    // Fator de velocidade de animação (< 1 = mais rápido; usado ao correr)
+    this._walkSpeed  = 1.0;
+
     // Direção de facing: 'down'|'up'|'left'|'right'
     this._facing = 'down';
   }
@@ -148,16 +151,18 @@ export class Avatar {
       }
     }
 
-    // Animação de walk
+    // Animação de walk (velocidade ajustável pelo _walkSpeed: < 1 = mais rápido)
     if (this._bobActive) {
       this._frameTimer += dt;
-      if (this._frameTimer >= FRAME_MS) {
-        this._frameTimer -= FRAME_MS;
+      const frameInterval = FRAME_MS * (this._walkSpeed ?? 1.0);
+      if (this._frameTimer >= frameInterval) {
+        this._frameTimer -= frameInterval;
         this._frameIdx = (this._frameIdx + 1) % WALK_FRAMES;
       }
     } else {
       this._frameIdx   = 0; // frame parado = primeiro frame da direção
       this._frameTimer = 0;
+      this._walkSpeed  = 1.0; // reseta ao parar
     }
   }
 

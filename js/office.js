@@ -73,9 +73,38 @@ export function isSolid(tileType) {
   return tileType === W || tileType === M || tileType === P || tileType === S;
 }
 
-/** Checa colisão de uma entidade (px, py) com raio r contra todos os tiles sólidos. */
+/**
+ * Referência ao módulo de layout (injetada por injectLayoutModule após o carregamento).
+ * Quando presente, collidesWithMap e getZoneAt delegam ao modelo unificado.
+ */
+let _layoutModule = null;
+
+/**
+ * Injeta o módulo de layout para que collidesWithMap e getZoneAt derivem do
+ * modelo unificado em vez do MAP estático.
+ * Chamado por main.js após receber o layout do servidor.
+ * @param {object} layoutMod — módulo layout.js com collidesWithLayout / getZoneFromLayout
+ */
+export function injectLayoutModule(layoutMod) {
+  _layoutModule = layoutMod;
+}
+
+/**
+ * Checa colisão de uma entidade (px, py) com raio r.
+ * Delega ao modelo de layout quando disponível; fallback para o MAP estático.
+ * Mantém a mesma assinatura para compatibilidade com player.js e server.js.
+ *
+ * @param {number} px
+ * @param {number} py
+ * @param {number} [r=10]
+ * @returns {boolean}
+ */
 export function collidesWithMap(px, py, r = 10) {
-  // Checa os 4 cantos do bounding box quadrado
+  // Usa o modelo unificado quando disponível
+  if (_layoutModule && _layoutModule.getLayout()) {
+    return _layoutModule.collidesWithLayout(px, py, r);
+  }
+  // Fallback: MAP estático
   const points = [
     [px - r, py - r],
     [px + r, py - r],
@@ -91,8 +120,20 @@ export function collidesWithMap(px, py, r = 10) {
   return false;
 }
 
-/** Retorna a zona em que o ponto (px, py) se encontra, ou null. */
+/**
+ * Retorna a zona em que o ponto (px, py) se encontra, ou null.
+ * Delega ao modelo de layout quando disponível; fallback para ZONES estático.
+ *
+ * @param {number} px
+ * @param {number} py
+ * @returns {{key:string, label:string, x:number, y:number, w:number, h:number, color:string}|null}
+ */
 export function getZoneAt(px, py) {
+  // Usa o modelo unificado quando disponível
+  if (_layoutModule && _layoutModule.getLayout()) {
+    return _layoutModule.getZoneFromLayout(px, py);
+  }
+  // Fallback: ZONES estático
   for (const [key, z] of Object.entries(ZONES)) {
     if (px >= z.x && px <= z.x + z.w && py >= z.y && py <= z.y + z.h) {
       return { key, ...z };

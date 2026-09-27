@@ -9,14 +9,16 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { spawn } from 'node:child_process';
-import { getZoneAt } from './js/office.js';
+import { getZoneAt, MAP, ZONES } from './js/office.js';
 import { AUDIO_RADIUS } from './js/spatial.js';
+import { generateSeedLayout } from './js/layout.js';
 
 // ─── Caminhos ────────────────────────────────────────────────────────────────
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const STATIC_ROOT = __dirname;
 const DATA_DIR = path.join(__dirname, 'data');
-const STATE_FILE = path.join(DATA_DIR, 'state.json');
+const STATE_FILE  = path.join(DATA_DIR, 'state.json');
+const LAYOUT_FILE = path.join(DATA_DIR, 'layout.json');
 
 // ─── MIME types ───────────────────────────────────────────────────────────────
 const MIME = {
@@ -45,6 +47,13 @@ let state = {
   demandas: [],
   sprint: {},
 };
+
+/**
+ * Layout unificado do escritório (grade + zonas).
+ * Carregado de data/layout.json ou gerado como seed inicial a partir do MAP/ZONES.
+ * @type {object}
+ */
+let layout = null;
 
 let demandaCounter = 0; // incrementado ao gerar IDs D-<n>
 
@@ -85,6 +94,65 @@ function scheduleSave() {
       fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), 'utf8');
     } catch (err) {
       console.error('[state] Erro ao gravar state.json:', err.message);
+    }
+  }, 500);
+}
+
+// ─── Layout ───────────────────────────────────────────────────────────────────
+
+/**
+ * Valida estrutura básica de um objeto de layout.
+ * @param {object} lay
+ * @returns {boolean}
+ */
+function validateLayout(lay) {
+  if (!lay || !Array.isArray(lay.cells) || !lay.zones) return false;
+  if (lay.cells.length !== 18) return false;
+  for (const row of lay.cells) {
+    if (!Array.isArray(row) || row.length !== 25) return false;
+  }
+  return true;
+}
+
+/**
+ * Carrega data/layout.json ou gera o seed inicial a partir do MAP/ZONES.
+ */
+function loadLayout() {
+  ensureDataDir();
+  if (fs.existsSync(LAYOUT_FILE)) {
+    try {
+      const raw = fs.readFileSync(LAYOUT_FILE, 'utf8');
+      const parsed = JSON.parse(raw);
+      if (validateLayout(parsed)) {
+        layout = parsed;
+        console.log('[layout] Carregado de layout.json');
+        return;
+      }
+      console.warn('[layout] layout.json inválido — gerando seed');
+    } catch (err) {
+      console.warn('[layout] Erro ao ler layout.json:', err.message, '— gerando seed');
+    }
+  }
+  // Gera seed a partir do MAP/ZONES
+  layout = generateSeedLayout(MAP, ZONES);
+  try {
+    fs.writeFileSync(LAYOUT_FILE, JSON.stringify(layout, null, 2), 'utf8');
+    console.log('[layout] Seed inicial gravado em layout.json');
+  } catch (err) {
+    console.error('[layout] Erro ao gravar layout.json:', err.message);
+  }
+}
+
+let layoutSaveTimer = null;
+function scheduleLayoutSave() {
+  if (layoutSaveTimer) return;
+  layoutSaveTimer = setTimeout(() => {
+    layoutSaveTimer = null;
+    ensureDataDir();
+    try {
+      fs.writeFileSync(LAYOUT_FILE, JSON.stringify(layout, null, 2), 'utf8');
+    } catch (err) {
+      console.error('[layout] Erro ao gravar layout.json:', err.message);
     }
   }, 500);
 }
@@ -164,11 +232,12 @@ function handleJoin(ws, msg) {
   };
   players.set(id, player);
 
-  // welcome: snapshot de todos players (sem socket) + estado persistido
+  // welcome: snapshot de todos players (sem socket) + estado persistido + layout
   send(ws, {
     t: 'welcome',
     youId: id,
     players: playersSnapshot(),
+    layout,
     state: {
       chat: state.chat,
       demandas: state.demandas,
@@ -302,6 +371,21 @@ function handleSprintSet(msg) {
   state.sprint = msg.sprint ?? {};
   scheduleSave();
   broadcastAll({ t: 'sprint', sprint: state.sprint });
+}
+
+/**
+ * Recebe um novo layout do cliente, valida, persiste e faz broadcast a todos.
+ * @param {object} msg — { t: 'layout_set', layout: {...} }
+ */
+function handleLayoutSet(msg) {
+  if (!validateLayout(msg.layout)) {
+    console.warn('[layout] layout_set recebido mas inválido — ignorado');
+    return;
+  }
+  layout = msg.layout;
+  scheduleLayoutSave();
+  broadcastAll({ t: 'layout', layout });
+  console.log('[layout] Atualizado e propagado para todos os clientes');
 }
 
 // ─── Gerenciador de Túnel Cloudflare ─────────────────────────────────────────
@@ -480,6 +564,7 @@ function serveStatic(req, res) {
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 loadState();
+loadLayout();
 
 const server = http.createServer((req, res) => {
   try {
@@ -552,6 +637,9 @@ wss.on('connection', (ws) => {
           break;
         case 'rtc_signal':
           if (playerId) handleRtcSignal(msg, playerId);
+          break;
+        case 'layout_set':
+          if (playerId) handleLayoutSet(msg);
           break;
         default:
           console.warn('[ws] Tipo desconhecido:', msg.t);
