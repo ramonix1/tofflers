@@ -74,9 +74,9 @@ const FRAME_MS = 140;
  */
 const DIR_COL = {
   down:  0,
-  left:  4,
+  right: 4,   // col 4: focinho aponta p/ direita (conferido no spritesheet)
   up:    8,
-  right: 12,
+  left:  12,  // col 12: focinho aponta p/ esquerda
 };
 
 /** Cache de imagens de skin: Map<skinName, HTMLImageElement> */
