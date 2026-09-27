@@ -21,7 +21,7 @@ import { Player }                   from './player.js';
 import { Avatar, ROLE_COLORS, ROLE_ICONS } from './avatar.js';
 import { Chat }                     from './chat.js';
 import { MeetingManager }           from './meetings.js';
-import { DemandasPanel }            from './demandas.js';
+import { DemandasPanel, showToast } from './demandas.js';
 import { SprintManager }            from './sprint.js';
 import { Net }                      from './net.js';
 import { RtcManager }               from './rtc.js';
@@ -369,10 +369,18 @@ const rtc = new RtcManager({
     const btn = mediaButtons[kind];
     if (!btn) return;
     btn.classList.toggle('active', active);
-    btn.classList.toggle('denied', !!denied);
     btn.setAttribute('aria-pressed', String(active));
     const titles = { mic: 'microfone', cam: 'câmera', screen: 'tela' };
     btn.title = (active ? 'Desativar ' : 'Ativar ') + titles[kind];
+    if (denied) {
+      // Marca por instantes mas NÃO trava: o usuário pode clicar de novo para
+      // liberar. Se o navegador tiver bloqueado, orienta a reabilitar.
+      btn.classList.add('denied');
+      showToast(`Permissão de ${titles[kind]} negada. Toque de novo para tentar — ou libere no cadeado/permissões do navegador.`);
+      setTimeout(() => btn.classList.remove('denied'), 4000);
+    } else {
+      btn.classList.remove('denied');
+    }
   },
 });
 
@@ -557,6 +565,11 @@ function loop(timestamp) {
 // ── Previne scroll ao pressionar setas ───────────────────────────────────────
 
 window.addEventListener('keydown', (e) => {
+  // Não sequestrar o teclado quando o usuário está digitando (chat, formulários).
+  // Senão o espaço/setas são bloqueados e WASD move o boneco enquanto se digita.
+  const t = e.target;
+  if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+
   if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) {
     e.preventDefault();
   }

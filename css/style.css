@@ -1667,10 +1667,12 @@ body {
     transform: translateX(-110%);
     transition: transform 0.25s ease;
     box-shadow: 4px 0 24px rgba(0,0,0,0.5);
-    /* Altura total da tela */
-    height: 100vh;
-    max-height: 100vh;
-    overflow-y: auto;
+    /* Altura dinâmica (dvh acomoda a barra do navegador mobile). O painel é
+       flex-column; o conteúdo interno (mensagens) rola — o painel NÃO rola,
+       senão o campo de input era empurrado para fora da tela. */
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
   }
 
   .side-panel.right {
@@ -1736,22 +1738,20 @@ body {
     width: 180px;
   }
 
-  /* ── Chat input: garante que teclado virtual não quebre o layout ── */
+  /* ── Chat no drawer: preenche o painel; mensagens rolam, input fixo embaixo ── */
   #chat-panel {
-    /* Usa altura dinâmica para acomodar teclado virtual no iOS/Android */
-    height: 100%;
-    max-height: 100%;
+    flex: 1;
+    min-height: 0;   /* permite que o filho (mensagens) encolha e role */
+    height: auto;
   }
 
   .chat-messages {
-    /* Flex shrink permite que a área de mensagens encolha quando teclado abre */
-    min-height: 60px;
+    /* Flex shrink permite encolher (teclado virtual) mantendo o input visível */
+    min-height: 0;
   }
 
   .chat-input-area {
-    /* Fica visível acima do teclado virtual */
-    position: sticky;
-    bottom: 0;
+    /* Fixo no fim do flex-column; flex-shrink:0 já vem do base */
     background: var(--bg-panel);
   }
 

@@ -153,6 +153,14 @@ export class RtcManager {
   async handleSignal(from, data) {
     if (!data) return;
 
+    // Peer avisou que parou um vídeo/tela (mid): remove o tile correspondente.
+    if (data.mediaOff != null) {
+      const peer = this.peers.get(from);
+      const tile = peer && peer.tiles.get(data.mediaOff);
+      if (tile) { tile.wrap.remove(); peer.tiles.delete(data.mediaOff); }
+      return;
+    }
+
     // Metadados de tipo de vídeo (cam vs tela) — não exige conexão prévia.
     if (data.meta) {
       const peer = this.peers.get(from);
@@ -287,6 +295,19 @@ export class RtcManager {
     if (stream) { for (const t of stream.getTracks()) { try { t.stop(); } catch { /* noop */ } } }
     this._localStreams[kind] = null;
     if (kind !== 'mic') this._removeSelfTile(kind);
+
+    // Avisa cada peer para remover o tile correspondente ANTES de remover o
+    // sender: removeTrack não dispara 'ended' de forma confiável no lado remoto,
+    // então o vídeo/tela ficaria "preso" na tela do outro. Enviamos o mid.
+    if (kind !== 'mic') {
+      for (const peer of this.peers.values()) {
+        const sender = peer.senders[kind];
+        if (!sender) continue;
+        const tr = peer.pc.getTransceivers().find((x) => x.sender === sender);
+        if (tr && tr.mid != null) this.net.sendSignal(peer.id, { mediaOff: tr.mid });
+      }
+    }
+
     this._syncAllSenders();
   }
 

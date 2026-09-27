@@ -62,6 +62,11 @@ export class Player extends Avatar {
 
   _bindKeys() {
     const onKey = (e) => {
+      // Ignora quando o usuário está digitando (chat/formulários): senão WASD
+      // move o boneco e o espaço some enquanto se escreve.
+      const t = e.target;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+
       const k   = e.key;
       const down = e.type === 'keydown';
 
