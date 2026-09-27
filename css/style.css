@@ -1353,3 +1353,403 @@ body {
   color: var(--accent);
   font-weight: 600;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESPONSIVIDADE MOBILE — breakpoint ≤ 820px
+   Desktop (≥ 821px): layout inalterado.
+   Mobile/tablet:
+     - Painéis laterais viram drawers/overlays sobrepostos
+     - Canvas ocupa toda a área principal
+     - Botões de drawer aparecem no header
+     - D-pad virtual visível
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── D-pad virtual ──────────────────────────────────────────────────────────
+   Posicionado no canto inferior-esquerdo do #canvas-wrapper.
+   Oculto por padrão; JS adiciona/remove via aria-hidden + classe body.is-touch.
+   CSS controla a visibilidade por media query e detecção de touch.
+*/
+
+#dpad {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  display: grid;
+  grid-template-columns: 54px 54px 54px;
+  grid-template-rows: 54px 54px;
+  gap: 4px;
+  z-index: 50;
+  /* Oculto em desktop com mouse */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+  /* Impede que gestos no D-pad propaguem scroll/zoom na página */
+  touch-action: none;
+}
+
+/* Botão Correr */
+#run-btn {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  z-index: 50;
+  min-width: 70px;
+  min-height: 54px;
+  background: rgba(99,102,241,0.25);
+  border: 2px solid var(--accent);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s, background 0.1s;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#run-btn:active,
+#run-btn[data-pressed="true"] {
+  background: rgba(99,102,241,0.55);
+}
+
+/* Botões direcionais do D-pad */
+.dpad-btn {
+  background: rgba(15,17,23,0.75);
+  border: 2px solid rgba(99,102,241,0.5);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 18px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  transition: background 0.1s, border-color 0.1s;
+  /* Tamanho mínimo de alvo de toque ≥ 44px */
+  min-width: 44px;
+  min-height: 44px;
+  backdrop-filter: blur(4px);
+}
+
+.dpad-btn:active {
+  background: rgba(99,102,241,0.45);
+  border-color: var(--accent);
+}
+
+/* Centro vazio do D-pad */
+.dpad-center {
+  background: transparent;
+  border: none;
+  pointer-events: none;
+}
+
+/* Posicionamento no grid 3×2:
+   Linha 1: [vazio] [↑] [vazio]
+   Linha 2: [←]    [·] [→]
+   Linha 3: [vazio] [↓] [vazio]
+   Como o grid é 3×2, usamos grid-template-areas */
+#dpad {
+  grid-template-areas:
+    ". up ."
+    "left center right"
+    ". down .";
+  grid-template-rows: 54px 54px 54px;
+}
+
+.dpad-up     { grid-area: up; }
+.dpad-left   { grid-area: left; }
+.dpad-center { grid-area: center; }
+.dpad-right  { grid-area: right; }
+.dpad-down   { grid-area: down; }
+
+/* ── Exibe D-pad em dispositivos touch (pointer: coarse) ── */
+@media (pointer: coarse) {
+  #dpad,
+  #run-btn {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+/* ── Exibe D-pad em telas estreitas independente do tipo de ponteiro ── */
+@media (max-width: 820px) {
+  #dpad,
+  #run-btn {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+/* ── Botões de drawer (só em mobile) ── */
+.header-drawer-btn {
+  display: none; /* oculto em desktop */
+  background: rgba(99,102,241,0.12);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  font-size: 18px;
+  line-height: 1;
+  padding: 5px 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.header-drawer-btn:hover {
+  background: rgba(99,102,241,0.25);
+}
+
+/* ── Botão fechar painel (só em mobile) ── */
+.panel-close-btn {
+  display: none; /* oculto em desktop */
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  transition: color 0.15s;
+  line-height: 1;
+  float: right;
+}
+
+.panel-close-btn:hover {
+  color: var(--text-primary);
+}
+
+/* Ajusta panel-title para acomodar o botão X */
+.panel-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ── Backdrop para fechar drawers ── */
+#drawer-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 98;
+  backdrop-filter: blur(2px);
+}
+
+#drawer-backdrop.visible {
+  display: block;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   BREAKPOINT MOBILE ≤ 820px
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 820px) {
+
+  /* Mostra botões de drawer no header */
+  .header-drawer-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Botão fechar dentro dos painéis */
+  .panel-close-btn {
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* ── Header compacto ── */
+  #header {
+    padding: 0 10px;
+    gap: 6px;
+    flex-wrap: wrap;
+    /* Permite que os botões menos usados quebrem linha se necessário */
+    height: auto;
+    min-height: var(--header-h);
+    /* Esconde separador visual e itens de menor prioridade */
+  }
+
+  /* Esconde o separador e info do usuário em telas muito pequenas */
+  @media (max-width: 480px) {
+    #header .sep { display: none; }
+    #header .user-role { display: none; }
+    #header .clock { display: none; }
+  }
+
+  /* Sprint Board: label curto */
+  #sprint-toggle-btn {
+    font-size: 10px;
+    padding: 4px 8px;
+  }
+
+  /* Convidar: oculta texto, só emoji */
+  .header-invite-btn {
+    font-size: 14px;
+    padding: 5px 8px;
+  }
+
+  /* Controles de mídia: mais compactos */
+  .media-btn {
+    padding: 4px 6px;
+    font-size: 14px;
+  }
+
+  /* ── Painéis laterais viram drawers ── */
+  .side-panel {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    z-index: 99;
+    width: min(var(--panel-w), 85vw);
+    /* Por padrão: fora da tela */
+    transform: translateX(-110%);
+    transition: transform 0.25s ease;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+    /* Altura total da tela */
+    height: 100vh;
+    max-height: 100vh;
+    overflow-y: auto;
+  }
+
+  .side-panel.right {
+    left: auto;
+    right: 0;
+    transform: translateX(110%);
+    box-shadow: -4px 0 24px rgba(0,0,0,0.5);
+  }
+
+  /* Painel esquerdo (Demandas) */
+  #demandas-panel {
+    left: 0;
+  }
+
+  /* Painel direito (Chat) */
+  #chat-panel-wrap {
+    right: 0;
+  }
+
+  /* Estado aberto */
+  .side-panel.drawer-open {
+    transform: translateX(0);
+  }
+
+  /* Canvas ocupa toda a área principal */
+  #main {
+    /* Os painéis estão fora do fluxo (fixed), então o canvas cresce */
+    overflow: hidden;
+  }
+
+  /* ── Controls hint: texto comprimido ── */
+  #controls-hint {
+    display: none; /* oculta dica de teclado em mobile (tem D-pad) */
+  }
+
+  /* ── Tela de entrada responsiva ── */
+  #entry-box {
+    padding: 24px 20px;
+    min-width: unset;
+    width: min(380px, calc(100vw - 32px));
+    margin: 16px;
+  }
+
+  /* ── Sprint modal responsivo ── */
+  .sprint-modal-box {
+    min-width: unset;
+    width: min(480px, calc(100vw - 32px));
+    max-height: 90vh;
+    margin: 16px;
+  }
+
+  /* ── Ajuste do video-strip em mobile ── */
+  #video-strip {
+    top: 8px;
+    right: 8px;
+  }
+
+  .video-tile {
+    width: 120px;
+  }
+
+  .video-tile.screen {
+    width: 180px;
+  }
+
+  /* ── Chat input: garante que teclado virtual não quebre o layout ── */
+  #chat-panel {
+    /* Usa altura dinâmica para acomodar teclado virtual no iOS/Android */
+    height: 100%;
+    max-height: 100%;
+  }
+
+  .chat-messages {
+    /* Flex shrink permite que a área de mensagens encolha quando teclado abre */
+    min-height: 60px;
+  }
+
+  .chat-input-area {
+    /* Fica visível acima do teclado virtual */
+    position: sticky;
+    bottom: 0;
+    background: var(--bg-panel);
+  }
+
+  /* ── touch-action no canvas (evita scroll/zoom da página ao jogar) ── */
+  #canvas-wrapper {
+    touch-action: none;
+  }
+
+  #office-canvas {
+    touch-action: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TELAS MUITO PEQUENAS ≤ 480px
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+  /* Esconde Sprint Board e Câmera do header — acessíveis dentro do canvas */
+  #sprint-toggle-btn { display: none; }
+  #camera-toggle-btn { display: none; }
+
+  /* Logo menor */
+  #header .logo {
+    font-size: 15px;
+  }
+
+  /* D-pad ligeiramente menor */
+  #dpad {
+    grid-template-columns: 48px 48px 48px;
+    grid-template-rows: 48px 48px 48px;
+    gap: 3px;
+    bottom: 12px;
+    left: 12px;
+  }
+
+  .dpad-btn {
+    font-size: 16px;
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  #run-btn {
+    min-width: 60px;
+    min-height: 48px;
+    bottom: 12px;
+    right: 12px;
+    font-size: 11px;
+  }
+
+  /* Meeting card: ocupa mais espaço */
+  #meeting-card {
+    min-width: unset;
+    width: calc(100% - 24px);
+    left: 12px;
+    right: 12px;
+    transform: none;
+  }
+}

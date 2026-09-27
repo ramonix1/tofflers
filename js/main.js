@@ -26,6 +26,7 @@ import { SprintManager }            from './sprint.js';
 import { Net }                      from './net.js';
 import { RtcManager }               from './rtc.js';
 import { AUDIO_RADIUS, distance, gainForDistance } from './spatial.js';
+import { registerPlayerGetter }     from './mobile-controls.js';
 
 // Injeta o módulo de layout no office.js (collidesWithMap e getZoneAt passam a usar o modelo)
 injectLayoutModule(LayoutModule);
@@ -195,6 +196,9 @@ function makeRemoteAvatar(p) {
 // ── Jogador local ─────────────────────────────────────────────────────────────
 
 let player = null; // criado após o join para ter nome/papel/skin corretos
+
+// Registra getter do player para o D-pad virtual (mobile-controls.js)
+registerPlayerGetter(() => player);
 
 // ── WebRTC por proximidade ─────────────────────────────────────────────────────
 

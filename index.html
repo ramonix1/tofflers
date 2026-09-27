@@ -18,6 +18,9 @@
       <span class="user-role">Gestor</span>
     </div>
     <div class="spacer"></div>
+    <!-- Botões mobile: abrir drawers (só visíveis em tela estreita) -->
+    <button id="demandas-drawer-btn" class="header-drawer-btn" title="Demandas" aria-label="Abrir demandas">📋</button>
+    <button id="chat-drawer-btn"     class="header-drawer-btn" title="Chat"     aria-label="Abrir chat">💬</button>
     <!-- Botão de toggle do board de Sprint -->
     <button id="sprint-toggle-btn" class="header-sprint-btn" title="Abrir board da sprint">
       📋 Sprint Board
@@ -37,7 +40,9 @@
 
     <!-- Painel Esquerdo: Demandas -->
     <aside class="side-panel" id="demandas-panel">
-      <div class="panel-title">📋 Demandas</div>
+      <div class="panel-title">📋 Demandas
+        <button class="panel-close-btn" id="demandas-close-btn" title="Fechar" aria-label="Fechar demandas">✕</button>
+      </div>
 
       <!-- Botão + formulário de nova demanda -->
       <div id="demandas-toolbar">
@@ -87,6 +92,18 @@
         &nbsp;·&nbsp; Grade: <strong>Tab</strong>
         &nbsp;·&nbsp; Use o canal <strong>🔊 Local</strong> para falar com quem está perto
       </div>
+
+      <!-- D-pad virtual (visível em touch/tela estreita) -->
+      <div id="dpad" aria-label="Controles de movimento" aria-hidden="true">
+        <button class="dpad-btn dpad-up"    data-dir="up"    aria-label="Cima">▲</button>
+        <button class="dpad-btn dpad-left"  data-dir="left"  aria-label="Esquerda">◀</button>
+        <button class="dpad-btn dpad-center" aria-hidden="true"></button>
+        <button class="dpad-btn dpad-right" data-dir="right" aria-label="Direita">▶</button>
+        <button class="dpad-btn dpad-down"  data-dir="down"  aria-label="Baixo">▼</button>
+      </div>
+
+      <!-- Botão Correr (canto inferior direito, touch) -->
+      <button id="run-btn" aria-label="Correr (segurar)">🏃 Correr</button>
 
       <!-- Card de Reunião (aparece quando entra na sala) -->
       <div id="meeting-card">
@@ -165,7 +182,9 @@
 
     <!-- Painel Direito: Chat -->
     <aside class="side-panel right" id="chat-panel-wrap">
-      <div class="panel-title">💬 Chat</div>
+      <div class="panel-title">💬 Chat
+        <button class="panel-close-btn" id="chat-close-btn" title="Fechar" aria-label="Fechar chat">✕</button>
+      </div>
 
       <div id="chat-panel">
         <!-- Abas -->
@@ -187,6 +206,9 @@
     </aside>
 
   </div><!-- /main -->
+
+  <!-- Backdrop para fechar drawers mobile (toque fora) -->
+  <div id="drawer-backdrop"></div>
 
   <!-- Toast de notificação -->
   <div id="toast"></div>
@@ -228,6 +250,7 @@
   <!-- Bootstrap da aplicação (ES modules) -->
   <script type="module" src="js/main.js"></script>
   <script type="module" src="js/invite.js"></script>
+  <!-- mobile-controls.js: importado via main.js (registerPlayerGetter) -->
 
 
   <!-- Tela de entrada (overlay) -->

@@ -86,6 +86,27 @@ export class Player extends Avatar {
   }
 
   /**
+   * API de input externo para D-pad virtual (e qualquer outro controle).
+   * Escreve nas mesmas flags que o teclado — os dois coexistem sem conflito.
+   *
+   * @param {'up'|'down'|'left'|'right'} dir — direção de TELA
+   * @param {boolean} pressed — true = pressionado, false = solto
+   */
+  setDir(dir, pressed) {
+    if (dir in this._keys) {
+      this._keys[dir] = pressed;
+    }
+  }
+
+  /**
+   * Aciona/desaciona corrida via controle externo (equivale a Shift segurado).
+   * @param {boolean} pressed
+   */
+  setRun(pressed) {
+    this._keys.shift = pressed;
+  }
+
+  /**
    * Atualiza posição do jogador.
    * @param {number} dt — delta time em ms
    */
