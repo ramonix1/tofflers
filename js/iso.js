@@ -35,6 +35,16 @@
 export const TW = 64;  // largura total do losango
 export const TH = 32;  // altura do losango (TW/2 para proporção 2:1)
 
+/**
+ * FLOOR_FILL_SCALE — o sprite de piso Kenney tem área OPACA de só 52×38 dentro
+ * do PNG 64×64 (padding transparente + é preview de modelo 3D, não tile 2D).
+ * Espaçado a TW=64, sobra ~12px de vão entre tiles → efeito "flutuando".
+ * Escalamos o piso em torno do seu centro por este fator para preencher a célula
+ * e sobrepor levemente os vizinhos (a passada de piso desenha de trás p/ frente,
+ * então a sobreposição esconde a espessura). Ajuste fino aqui se ainda houver vão.
+ */
+export const FLOOR_FILL_SCALE = 1.32;
+
 // ── Tamanho do tile de mundo (importado de office.js, mas replicado aqui para clareza)
 export const WORLD_TILE = 32; // px no espaço de mundo
 

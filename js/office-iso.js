@@ -18,7 +18,7 @@ import { MAP, ZONES, TILE, COLS, ROWS } from './office.js';
 import { getLayout } from './layout.js';
 import {
   TW, TH, ORIGIN_X, ORIGIN_Y,
-  WALL_SPRITE_H, WALL_FOOT_OFFSET,
+  WALL_SPRITE_H, WALL_FOOT_OFFSET, FLOOR_FILL_SCALE,
   worldToScreen, depthKey,
 } from './iso.js';
 
@@ -197,9 +197,15 @@ function tileScreen(col, row) {
 function drawFloorSprite(ctx, spriteName, sx, sy, scale = 1) {
   const image = img(spriteName);
   if (!image.complete || image.naturalWidth === 0) return;
-  const w = image.naturalWidth  * scale;
-  const h = image.naturalHeight * scale;
-  ctx.drawImage(image, sx - w / 2, sy - h + TH / 2, w, h);
+  // Centro do losango do piso NA CÉLULA (independe do fator de preenchimento),
+  // igual ao anterior: sy - h/2 + TH/2 com o sprite natural.
+  const cx = sx;
+  const cy = sy - image.naturalHeight * scale / 2 + TH / 2;
+  // Escala de preenchimento fecha os vãos entre tiles (piso é preview 3D com padding).
+  const s = scale * FLOOR_FILL_SCALE;
+  const w = image.naturalWidth  * s;
+  const h = image.naturalHeight * s;
+  ctx.drawImage(image, cx - w / 2, cy - h / 2, w, h);
 }
 
 /**
