@@ -250,14 +250,22 @@ export class RtcManager {
       this.onStateChange('mic', true);
     } catch (err) {
       console.error('[rtc] getUserMedia(mic) falhou:', err);
-      this.onStateChange('mic', false, true);
+      this.onStateChange('mic', false, true, err && err.name);
     }
   }
 
   async toggleCam() {
     if (this.local.cam) { this._stopKind('cam'); this.onStateChange('cam', false); return; }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 } });
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { width: 320, height: 240 } });
+      } catch (e) {
+        // Constraints muito restritas para a câmera → tenta sem restrição.
+        if (e && e.name === 'OverconstrainedError') {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        } else { throw e; }
+      }
       this._localStreams.cam = stream;
       this.local.cam = stream.getVideoTracks()[0];
       this.local.cam.onended = () => { this._stopKind('cam'); this.onStateChange('cam', false); };
@@ -266,7 +274,7 @@ export class RtcManager {
       this.onStateChange('cam', true);
     } catch (err) {
       console.error('[rtc] getUserMedia(cam) falhou:', err);
-      this.onStateChange('cam', false, true);
+      this.onStateChange('cam', false, true, err && err.name);
     }
   }
 
@@ -283,7 +291,7 @@ export class RtcManager {
       this.onStateChange('screen', true);
     } catch (err) {
       console.error('[rtc] getDisplayMedia falhou:', err);
-      this.onStateChange('screen', false, true);
+      this.onStateChange('screen', false, true, err && err.name);
     }
   }
 

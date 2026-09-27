@@ -418,7 +418,7 @@ const rtc = new RtcManager({
   remotePlayers,
   videoStrip: document.getElementById('video-strip'),
   selfLabel: () => (player ? player.name : 'Você'),
-  onStateChange: (kind, active, denied) => {
+  onStateChange: (kind, active, denied, reason) => {
     const btn = mediaButtons[kind];
     if (!btn) return;
     btn.classList.toggle('active', active);
@@ -427,9 +427,30 @@ const rtc = new RtcManager({
     btn.title = (active ? 'Desativar ' : 'Ativar ') + titles[kind];
     if (denied) {
       // Marca por instantes mas NÃO trava: o usuário pode clicar de novo para
-      // liberar. Se o navegador tiver bloqueado, orienta a reabilitar.
+      // liberar. Mensagem específica pelo tipo de erro do getUserMedia.
       btn.classList.add('denied');
-      showToast(`Permissão de ${titles[kind]} negada. Toque de novo para tentar — ou libere no cadeado/permissões do navegador.`);
+      const nome = titles[kind];
+      let msg;
+      switch (reason) {
+        case 'NotAllowedError':
+        case 'SecurityError':
+          msg = `${nome}: acesso bloqueado pelo navegador. Não dá pra re-perguntar daqui — libere no ícone de cadeado/câmera da barra de endereço (ou chrome://settings/content/camera) e recarregue.`;
+          break;
+        case 'NotFoundError':
+        case 'DevicesNotFoundError':
+          msg = `${nome}: nenhum dispositivo encontrado neste computador.`;
+          break;
+        case 'NotReadableError':
+        case 'TrackStartError':
+          msg = `${nome}: em uso por outro app (feche Zoom/Meet/OBS etc.) e tente de novo.`;
+          break;
+        case 'OverconstrainedError':
+          msg = `${nome}: a configuração pedida não é suportada.`;
+          break;
+        default:
+          msg = `${nome} indisponível${reason ? ` (${reason})` : ''}. Toque de novo para tentar.`;
+      }
+      showToast(msg);
       setTimeout(() => btn.classList.remove('denied'), 4000);
     } else {
       btn.classList.remove('denied');
