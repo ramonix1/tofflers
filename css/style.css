@@ -1818,3 +1818,162 @@ body {
     transform: none;
   }
 }
+
+/* ── Editor de Ambiente (Estágio 2) ── */
+
+/* Painel flutuante da paleta */
+.editor-panel {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 210px;
+  max-height: calc(100% - 24px);
+  overflow-y: auto;
+  background: var(--bg-panel);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 32px rgba(99,102,241,0.30);
+  z-index: 25;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.editor-panel--hidden {
+  display: none !important;
+}
+
+.editor-panel__header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.editor-panel__title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  flex: 1;
+  min-width: 100%;
+}
+
+/* Indicador não salvo */
+.editor-unsaved-dot {
+  font-size: 10px;
+  color: var(--accent-warn);
+  font-weight: 600;
+}
+.editor-unsaved-dot--hidden {
+  display: none !important;
+}
+
+/* Botões do editor */
+.editor-btn {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.editor-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(99,102,241,0.1);
+}
+.editor-btn--primary {
+  background: rgba(99,102,241,0.15);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.editor-btn--primary:hover {
+  background: rgba(99,102,241,0.30);
+}
+
+/* Seções de categoria da paleta */
+.editor-palette-section {
+  padding: 8px 10px 6px;
+  border-bottom: 1px solid var(--border);
+}
+.editor-palette-section:last-child {
+  border-bottom: none;
+}
+
+.editor-palette-cat {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+/* Grid de peças */
+.editor-palette-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+
+.editor-palette-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 5px 3px;
+  cursor: pointer;
+  transition: all 0.12s;
+  min-width: 0;
+}
+.editor-palette-btn:hover {
+  border-color: var(--accent-hover);
+  background: rgba(99,102,241,0.12);
+}
+.editor-palette-btn--sel {
+  border-color: var(--accent);
+  background: rgba(99,102,241,0.22);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.editor-palette-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.editor-palette-lbl {
+  font-size: 9px;
+  color: var(--text-muted);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+/* Dica de uso */
+.editor-dica {
+  font-size: 10px;
+  color: var(--text-muted);
+  padding: 8px 12px 10px;
+  line-height: 1.4;
+}
+
+/* Botão de edição no header: estado ativo */
+#editor-toggle-btn.active {
+  background: rgba(99,102,241,0.20);
+  border-color: var(--accent);
+  color: var(--accent);
+}

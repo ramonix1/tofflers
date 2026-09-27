@@ -232,12 +232,13 @@ function handleJoin(ws, msg) {
   };
   players.set(id, player);
 
-  // welcome: snapshot de todos players (sem socket) + estado persistido + layout
+  // welcome: snapshot de todos players (sem socket) + estado persistido + layout + isHost
   send(ws, {
     t: 'welcome',
     youId: id,
     players: playersSnapshot(),
     layout,
+    isHost: ws._isHost ?? false,
     state: {
       chat: state.chat,
       demandas: state.demandas,
@@ -604,8 +605,24 @@ wss.on('close', () => {
   clearInterval(heartbeatTimer);
 });
 
-wss.on('connection', (ws) => {
+wss.on('connection', (ws, req) => {
   let playerId = null;
+
+  // ── Detecção de host: acesso direto (localhost) vs. convidado (túnel Cloudflare) ──
+  // Convidados chegam pelo túnel e carregam headers cf-ray / cf-connecting-ip (e/ou
+  // x-forwarded-for). O host acessa diretamente: esses headers NÃO existem.
+  const hdrs = req.headers;
+  const isHost = !(hdrs['cf-ray'] || hdrs['cf-connecting-ip'] || hdrs['x-forwarded-for']);
+
+  // Log das chaves de headers do upgrade (primeiro connect apenas, para diagnóstico)
+  if (!wss._headerLogDone) {
+    wss._headerLogDone = true;
+    console.log('[ws] Headers do upgrade (primeira conexão):', Object.keys(hdrs).join(', '));
+    console.log('[ws] isHost =', isHost, '| cf-ray:', hdrs['cf-ray'], '| cf-connecting-ip:', hdrs['cf-connecting-ip'], '| x-forwarded-for:', hdrs['x-forwarded-for']);
+  }
+
+  // Guarda isHost no socket para enforcement nas mensagens de mutação
+  ws._isHost = isHost;
 
   ws.isAlive = true;
   ws.on('pong', () => { ws.isAlive = true; });
@@ -646,7 +663,13 @@ wss.on('connection', (ws) => {
           if (playerId) handleRtcSignal(msg, playerId);
           break;
         case 'layout_set':
-          if (playerId) handleLayoutSet(msg);
+          if (playerId) {
+            if (!ws._isHost) {
+              console.warn('[ws] layout_set rejeitado: remetente não é host (isHost=false)');
+            } else {
+              handleLayoutSet(msg);
+            }
+          }
           break;
         default:
           console.warn('[ws] Tipo desconhecido:', msg.t);

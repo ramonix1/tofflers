@@ -249,6 +249,15 @@ export class Net {
     this._sendRaw({ t: 'sprint_set', sprint });
   }
 
+  /**
+   * Envia o layout editado ao servidor para persistência e broadcast.
+   * O servidor só aceita de sockets com isHost=true; o cliente só chama se for host.
+   * @param {object} layout — objeto de layout completo (cells + zones)
+   */
+  sendLayoutSet(layout) {
+    this._sendRaw({ t: 'layout_set', layout });
+  }
+
   /** Fecha a conexão intencionalmente (sem reconectar). */
   disconnect() {
     this._intentionallyClosed = true;

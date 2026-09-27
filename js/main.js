@@ -17,6 +17,7 @@ import { MAP_W, MAP_H, getZoneAt, injectLayoutModule } from './office.js';
 import { CANVAS_W, CANVAS_H, worldToScreen, worldDepthKey } from './iso.js';
 import { renderOfficeIso, renderDebugOverlay } from './office-iso.js';
 import * as LayoutModule from './layout.js';
+import { initEditor, isEditorAtivo, renderEditorOverlay, handlePointerEvent } from './editor.js';
 import { Player }                   from './player.js';
 import { Avatar, ROLE_COLORS, ROLE_ICONS } from './avatar.js';
 import { Chat }                     from './chat.js';
@@ -113,6 +114,30 @@ let cameraMode = (() => {
 
 /** Overlay de diagnóstico ligado/desligado */
 let debugOverlay = false;
+
+/**
+ * Indica se o cliente atual é o host (acesso direto via localhost).
+ * Recebido no welcome do servidor. Fail-closed: false por padrão.
+ * @type {boolean}
+ */
+let _isHost = false;
+
+/**
+ * Retorna o estado atual da câmera para o editor (picking tela→célula).
+ * Exposto como função para que o editor não precise de variáveis globais de main.
+ * @returns {{cameraMode:string, camX:number, camY:number, zoom:number, dpr:number, logicalW:number, logicalH:number}}
+ */
+function getCameraState() {
+  return {
+    cameraMode,
+    camX,
+    camY,
+    zoom,
+    dpr: _dpr,
+    logicalW: _logicalW || canvasWrapper.clientWidth  || 800,
+    logicalH: _logicalH || canvasWrapper.clientHeight || 600,
+  };
+}
 
 /**
  * Aplica o modo de câmera.
@@ -309,6 +334,34 @@ canvas.addEventListener('touchcancel', () => {
   _pinchDist0 = null;
 }, { passive: false });
 
+// ── Eventos de ponteiro para o editor ────────────────────────────────────────
+// Delegados ao editor apenas quando ele está ativo. Não interferem com o jogo.
+
+canvas.addEventListener('mousedown', (e) => {
+  if (isEditorAtivo()) {
+    e.preventDefault();
+    handlePointerEvent('down', e);
+  }
+});
+
+canvas.addEventListener('mousemove', (e) => {
+  if (isEditorAtivo()) {
+    handlePointerEvent('move', e);
+  }
+});
+
+canvas.addEventListener('mouseup', (e) => {
+  if (isEditorAtivo()) {
+    handlePointerEvent('up', e);
+  }
+});
+
+canvas.addEventListener('mouseleave', (e) => {
+  if (isEditorAtivo()) {
+    handlePointerEvent('leave', e);
+  }
+});
+
 // ── Net ───────────────────────────────────────────────────────────────────────
 
 const net = new Net();
@@ -449,8 +502,10 @@ function render() {
   // Piso + zonas coloridas iso + objetos do cenário em painter's order
   renderOfficeIso(ctx);
 
-  // Overlay de diagnóstico (liga/desliga com Tab)
-  if (debugOverlay) {
+  // Overlay de diagnóstico (Tab) ou overlay do editor (modo edição)
+  if (isEditorAtivo()) {
+    renderEditorOverlay(ctx);
+  } else if (debugOverlay) {
     renderDebugOverlay(ctx);
   }
 
@@ -587,6 +642,12 @@ net.onWelcome = (data) => {
   // Aplica layout recebido do servidor
   if (data.layout) {
     LayoutModule.applyLayout(data.layout);
+  }
+
+  // Gating host: só inicializa o editor se o servidor confirmar isHost=true
+  if (data.isHost === true && !_isHost) {
+    _isHost = true;
+    initEditor({ net, getCameraState });
   }
 
   const me = (data.players || []).find(p => p.id === net.youId);
