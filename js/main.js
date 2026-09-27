@@ -52,9 +52,24 @@ canvas.height = CANVAS_H; // ~888
  */
 const CAMERA_LERP = 0.1; // suavização da câmera (10% por frame ≈ movimento fluido)
 
-/** Posição atual da câmera (tela → canvas) em modo follow */
+/** Ponto focal da câmera (em coords de tela iso) — para onde ela olha, suavizado */
 let camX = CANVAS_W / 2;
 let camY = CANVAS_H / 2;
+
+/**
+ * Zoom por scroll do mouse.
+ * ┌─ CONSTANTES DE AJUSTE DE ZOOM ────────────────────────────────────────────┐
+ * │  ZOOM_MIN / ZOOM_MAX — limites do zoom (1 = tamanho natural).              │
+ * │  ZOOM_STEP           — quanto cada "clique" do scroll altera o zoom.       │
+ * └───────────────────────────────────────────────────────────────────────────┘
+ */
+const ZOOM_MIN = 0.6;
+const ZOOM_MAX = 2.6;
+const ZOOM_STEP = 0.12;
+let zoom = (() => {
+  try { return parseFloat(localStorage.getItem('enterprise_zoom')) || 1; } catch { return 1; }
+})();
+zoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoom));
 
 /** Modo de câmera atual */
 let cameraMode = (() => {
@@ -122,6 +137,24 @@ function injectCameraToggleBtn() {
 }
 
 injectCameraToggleBtn();
+
+// ── Zoom pelo scroll do mouse ─────────────────────────────────────────────────
+
+canvas.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  // Zoom só tem efeito no modo 'follow' (transform via ctx). Se estiver em
+  // 'full' (mapa inteiro via CSS), rolar o scroll leva de volta ao follow.
+  if (cameraMode !== 'follow') {
+    cameraMode = 'follow';
+    applyCameraMode();
+    const b = document.getElementById('camera-toggle-btn');
+    if (b) b.textContent = '🎥 Câmera';
+    try { localStorage.setItem('enterprise_camera', 'follow'); } catch {}
+  }
+  const dir = e.deltaY < 0 ? 1 : -1; // scroll p/ cima = aproxima
+  zoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoom + dir * ZOOM_STEP));
+  try { localStorage.setItem('enterprise_zoom', String(zoom)); } catch {}
+}, { passive: false });
 
 // ── Net ───────────────────────────────────────────────────────────────────────
 
@@ -219,28 +252,22 @@ function render() {
 
   // ── Câmera ──────────────────────────────────────────────────────────────────
   if (cameraMode === 'follow' && player) {
-    // Centraliza o canvas no jogador suavemente
+    // Ponto focal: posição do jogador em tela iso
     const { sx: targetX, sy: targetY } = worldToScreen(player.x, player.y);
 
     // Viewport: dimensões da área visível do wrapper
     const vw = canvasWrapper.clientWidth  || 800;
     const vh = canvasWrapper.clientHeight || 600;
 
-    // Destino da câmera: translação para centralizar o jogador na viewport
-    const desiredCamX = vw / 2 - targetX;
-    const desiredCamY = vh / 2 - targetY;
+    // Suaviza o ponto focal (segue o jogador com lerp)
+    camX += (targetX - camX) * CAMERA_LERP;
+    camY += (targetY - camY) * CAMERA_LERP;
 
-    // Suavização por lerp
-    camX += (desiredCamX - camX) * CAMERA_LERP;
-    camY += (desiredCamY - camY) * CAMERA_LERP;
-
-    // Limita a câmera para não mostrar área fora do canvas
-    const minCamX = Math.min(0, vw - CANVAS_W);
-    const minCamY = Math.min(0, vh - CANVAS_H);
-    camX = Math.max(minCamX, Math.min(0, camX));
-    camY = Math.max(minCamY, Math.min(0, camY));
-
-    ctx.translate(camX, camY);
+    // Transform: centro da viewport → escala do zoom → desloca para o foco.
+    // Assim o zoom acontece em torno do personagem e o canvas o segue.
+    ctx.translate(vw / 2, vh / 2);
+    ctx.scale(zoom, zoom);
+    ctx.translate(-camX, -camY);
   }
   // Em modo 'full': sem translate; o CSS já escalou o canvas para caber
 
