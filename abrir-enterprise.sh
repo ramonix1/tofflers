@@ -37,6 +37,7 @@ if command -v google-chrome >/dev/null 2>&1; then
     --new-window \
     --no-first-run \
     --no-default-browser-check \
+    --use-fake-ui-for-media-stream \
     >/dev/null 2>&1
 else
   xdg-open "$URL" >/dev/null 2>&1 || gio open "$URL" >/dev/null 2>&1 || true
