@@ -17,7 +17,7 @@ import { MAP_W, MAP_H, getZoneAt, injectLayoutModule } from './office.js';
 import { CANVAS_W, CANVAS_H, worldToScreen, worldDepthKey } from './iso.js';
 import { renderOfficeIso, renderDebugOverlay } from './office-iso.js';
 import * as LayoutModule from './layout.js';
-import { initEditor, isEditorAtivo, renderEditorOverlay, handlePointerEvent } from './editor.js';
+import { initEditor, isEditorAtivo, renderEditorOverlay, handlePointerEvent, toggleEditorModo, onEditorToggle } from './editor.js';
 import { Player }                   from './player.js';
 import { Avatar, ROLE_COLORS, ROLE_ICONS } from './avatar.js';
 import { Chat }                     from './chat.js';
@@ -142,89 +142,120 @@ function getCameraState() {
 /**
  * Aplica o modo de câmera.
  * Agora o redimensionamento é feito via bitmap (resizeCanvas); não há mais
- * manipulação de CSS transform no canvas. Esta função apenas sincroniza o
- * botão do header (rótulo) e os controles mobile.
+ * manipulação de CSS transform no canvas. Esta função sincroniza os itens
+ * de câmera dentro do menu de opções.
  */
 function applyCameraMode() {
   // Garante que o canvas não tenha transform CSS residual de versão anterior
   canvas.style.transform = '';
   canvas.style.width  = '';
   canvas.style.height = '';
-  // Sincroniza rótulo do botão de câmera mobile
-  const mbtn = document.getElementById('mob-cam-toggle');
-  if (mbtn) mbtn.textContent = cameraMode === 'follow' ? '🎥' : '🗺️';
+  // Sincroniza o item de câmera dentro do menu de opções
+  const itemCam = document.getElementById('opts-cam-item');
+  if (itemCam) {
+    const isFollow = cameraMode === 'follow';
+    itemCam.textContent = isFollow ? '🎥 Seguir jogador' : '🗺️ Mapa inteiro';
+    itemCam.classList.toggle('active', isFollow);
+    itemCam.setAttribute('aria-pressed', String(isFollow));
+  }
 }
 
 applyCameraMode();
 window.addEventListener('resize', applyCameraMode);
 
-// ── Botão de toggle de câmera ─────────────────────────────────────────────────
-
-function injectCameraToggleBtn() {
-  const header = document.getElementById('header');
-  if (!header || document.getElementById('camera-toggle-btn')) return;
-
-  const btn = document.createElement('button');
-  btn.id = 'camera-toggle-btn';
-  btn.className = 'header-sprint-btn';
-  btn.title = 'Alternar câmera: seguir jogador / mapa inteiro';
-  btn.textContent = cameraMode === 'follow' ? '🎥 Câmera' : '🗺️ Mapa';
-
-  btn.addEventListener('click', () => {
-    cameraMode = cameraMode === 'follow' ? 'full' : 'follow';
-    btn.textContent = cameraMode === 'follow' ? '🎥 Câmera' : '🗺️ Mapa';
-    try { localStorage.setItem('enterprise_camera', cameraMode); } catch {}
-    applyCameraMode();
-  });
-
-  // Insere antes do botão de sprint
-  const sprintBtn = document.getElementById('sprint-toggle-btn');
-  if (sprintBtn) {
-    header.insertBefore(btn, sprintBtn);
-  } else {
-    header.appendChild(btn);
-  }
-}
-
-injectCameraToggleBtn();
+// ── Menu de Opções ────────────────────────────────────────────────────────────
 
 /**
- * Injeta cluster de controles mobile (zoom ＋/− e câmera) no canto superior-direito.
- * Só afeta mobile (CSS já garante display:none em desktop).
+ * Inicializa o menu de opções unificado:
+ *   - Botão "⚙️ Opções" já existe no HTML (id="options-btn")
+ *   - Cria e injeta o painel dropdown com 3 seções:
+ *       1. Mídia & permissões  (mic, câmera, tela)
+ *       2. Preferências        (câmera follow/full, zoom +/−, grade/debug)
+ *       3. Ambiente            (SÓ HOST — entra/sai do modo edição)
+ *
+ * O gating host-only é fail-closed: a seção "Ambiente" fica oculta até que
+ * `revelarSecaoHost()` seja chamado explicitamente após receber isHost=true.
  */
-function injectMobileCamControls() {
-  if (document.getElementById('mobile-cam-controls')) return;
+function initOptionsMenu() {
+  const optsBtn = document.getElementById('options-btn');
+  if (!optsBtn) return;
 
-  const wrap = document.createElement('div');
-  wrap.id = 'mobile-cam-controls';
+  // ── Painel dropdown ──────────────────────────────────────────────────────
+  const panel = document.createElement('div');
+  panel.id = 'options-panel';
+  panel.className = 'options-panel options-panel--hidden';
+  panel.setAttribute('role', 'dialog');
+  panel.setAttribute('aria-label', 'Opções');
 
-  // Botão câmera toggle (follow ↔ full)
-  const camBtn = document.createElement('button');
-  camBtn.id = 'mob-cam-toggle';
-  camBtn.className = 'mob-cam-btn';
-  camBtn.title = 'Alternar câmera: seguir / mapa inteiro';
-  camBtn.textContent = cameraMode === 'follow' ? '🎥' : '🗺️';
-  camBtn.addEventListener('click', () => {
+  // ── Cabeçalho do painel ──────────────────────────────────────────────────
+  const panelHeader = document.createElement('div');
+  panelHeader.className = 'options-panel__header';
+  panelHeader.innerHTML = '<span class="options-panel__title">⚙️ Opções</span>';
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'options-close-btn';
+  closeBtn.title = 'Fechar';
+  closeBtn.setAttribute('aria-label', 'Fechar opções');
+  closeBtn.textContent = '✕';
+  closeBtn.addEventListener('click', fecharMenu);
+  panelHeader.appendChild(closeBtn);
+  panel.appendChild(panelHeader);
+
+  // ────────────────────────────────────────────────────────────────────────
+  // Seção 1: Mídia & permissões
+  // ────────────────────────────────────────────────────────────────────────
+  const secMidia = criarSecao('🎙️ Mídia & permissões');
+
+  const itemMic = criarToggleItem('mic-toggle-btn', '🎤', 'Microfone', false);
+  itemMic.addEventListener('click', () => rtc.toggleMic());
+  secMidia.appendChild(itemMic);
+
+  const itemCam = criarToggleItem('cam-toggle-btn', '📹', 'Câmera', false);
+  itemCam.addEventListener('click', () => rtc.toggleCam());
+  secMidia.appendChild(itemCam);
+
+  const itemScreen = criarToggleItem('screen-toggle-btn', '🖥️', 'Compartilhar tela', false);
+  itemScreen.addEventListener('click', () => rtc.toggleScreen());
+  secMidia.appendChild(itemScreen);
+
+  panel.appendChild(secMidia);
+
+  // ────────────────────────────────────────────────────────────────────────
+  // Seção 2: Preferências de visualização
+  // ────────────────────────────────────────────────────────────────────────
+  const secPref = criarSecao('🖼️ Visualização');
+
+  // Câmera: toggle follow ↔ mapa inteiro
+  const itemCamMode = document.createElement('button');
+  itemCamMode.id = 'opts-cam-item';
+  itemCamMode.className = 'options-item options-item--toggle';
+  itemCamMode.setAttribute('aria-pressed', String(cameraMode === 'follow'));
+  itemCamMode.textContent = cameraMode === 'follow' ? '🎥 Seguir jogador' : '🗺️ Mapa inteiro';
+  itemCamMode.addEventListener('click', () => {
     cameraMode = cameraMode === 'follow' ? 'full' : 'follow';
-    camBtn.textContent = cameraMode === 'follow' ? '🎥' : '🗺️';
     try { localStorage.setItem('enterprise_camera', cameraMode); } catch {}
-    const hBtn = document.getElementById('camera-toggle-btn');
-    if (hBtn) hBtn.textContent = cameraMode === 'follow' ? '🎥 Câmera' : '🗺️ Mapa';
     applyCameraMode();
   });
+  secPref.appendChild(itemCamMode);
 
-  // Botão zoom +
-  const zoomIn = document.createElement('button');
-  zoomIn.id = 'mob-zoom-in';
-  zoomIn.className = 'mob-cam-btn';
-  zoomIn.title = 'Aumentar zoom';
-  zoomIn.textContent = '＋';
-  zoomIn.addEventListener('click', () => {
+  // Zoom: botões + e −
+  const zoomRow = document.createElement('div');
+  zoomRow.className = 'options-zoom-row';
+  const zoomLbl = document.createElement('span');
+  zoomLbl.className = 'options-zoom-lbl';
+  zoomLbl.textContent = 'Zoom';
+  const zoomNote = document.createElement('span');
+  zoomNote.className = 'options-zoom-note';
+  zoomNote.textContent = 'scroll/pinça';
+  const zoomBtns = document.createElement('div');
+  zoomBtns.className = 'options-zoom-btns';
+
+  const btnZoomIn = document.createElement('button');
+  btnZoomIn.className = 'options-zoom-btn';
+  btnZoomIn.title = 'Aumentar zoom';
+  btnZoomIn.textContent = '＋';
+  btnZoomIn.addEventListener('click', () => {
     if (cameraMode !== 'follow') {
       cameraMode = 'follow';
-      camBtn.textContent = '🎥';
-      const hBtn = document.getElementById('camera-toggle-btn');
-      if (hBtn) hBtn.textContent = '🎥 Câmera';
       try { localStorage.setItem('enterprise_camera', 'follow'); } catch {}
       applyCameraMode();
     }
@@ -232,18 +263,13 @@ function injectMobileCamControls() {
     try { localStorage.setItem('enterprise_zoom', String(zoom)); } catch {}
   });
 
-  // Botão zoom −
-  const zoomOut = document.createElement('button');
-  zoomOut.id = 'mob-zoom-out';
-  zoomOut.className = 'mob-cam-btn';
-  zoomOut.title = 'Diminuir zoom';
-  zoomOut.textContent = '−';
-  zoomOut.addEventListener('click', () => {
+  const btnZoomOut = document.createElement('button');
+  btnZoomOut.className = 'options-zoom-btn';
+  btnZoomOut.title = 'Diminuir zoom';
+  btnZoomOut.textContent = '−';
+  btnZoomOut.addEventListener('click', () => {
     if (cameraMode !== 'follow') {
       cameraMode = 'follow';
-      camBtn.textContent = '🎥';
-      const hBtn = document.getElementById('camera-toggle-btn');
-      if (hBtn) hBtn.textContent = '🎥 Câmera';
       try { localStorage.setItem('enterprise_camera', 'follow'); } catch {}
       applyCameraMode();
     }
@@ -251,14 +277,144 @@ function injectMobileCamControls() {
     try { localStorage.setItem('enterprise_zoom', String(zoom)); } catch {}
   });
 
-  wrap.appendChild(camBtn);
-  wrap.appendChild(zoomIn);
-  wrap.appendChild(zoomOut);
-  // Insere no body (posição fixed, não depende do DOM pai)
-  document.body.appendChild(wrap);
+  zoomBtns.appendChild(btnZoomOut);
+  zoomBtns.appendChild(btnZoomIn);
+  zoomRow.appendChild(zoomLbl);
+  zoomRow.appendChild(zoomNote);
+  zoomRow.appendChild(zoomBtns);
+  secPref.appendChild(zoomRow);
+
+  // Grade / diagnóstico
+  const itemDebug = document.createElement('button');
+  itemDebug.id = 'opts-debug-item';
+  itemDebug.className = 'options-item options-item--toggle';
+  itemDebug.setAttribute('aria-pressed', String(debugOverlay));
+  itemDebug.textContent = debugOverlay ? '🔲 Grade: ligada' : '🔳 Grade / diagnóstico';
+  itemDebug.addEventListener('click', () => {
+    debugOverlay = !debugOverlay;
+    itemDebug.textContent = debugOverlay ? '🔲 Grade: ligada' : '🔳 Grade / diagnóstico';
+    itemDebug.setAttribute('aria-pressed', String(debugOverlay));
+    itemDebug.classList.toggle('active', debugOverlay);
+  });
+  secPref.appendChild(itemDebug);
+
+  panel.appendChild(secPref);
+
+  // ────────────────────────────────────────────────────────────────────────
+  // Seção 3: Ambiente (SÓ HOST — fail-closed: oculta por padrão)
+  // ────────────────────────────────────────────────────────────────────────
+  const secHost = document.createElement('div');
+  secHost.id = 'opts-section-host';
+  secHost.className = 'options-section';
+  secHost.style.display = 'none'; // oculto até revelarSecaoHost()
+
+  const hostSectionTitle = document.createElement('div');
+  hostSectionTitle.className = 'options-section__title';
+  hostSectionTitle.textContent = '🏗️ Ambiente';
+  secHost.appendChild(hostSectionTitle);
+
+  const itemEditor = document.createElement('button');
+  itemEditor.id = 'opts-editor-item';
+  itemEditor.className = 'options-item options-item--toggle';
+  itemEditor.setAttribute('aria-pressed', 'false');
+  itemEditor.textContent = '🛠 Editar ambiente';
+  itemEditor.addEventListener('click', () => {
+    toggleEditorModo();
+    // Estado visual atualizado via onEditorToggle callback (abaixo)
+  });
+  secHost.appendChild(itemEditor);
+  panel.appendChild(secHost);
+
+  // ── Registra callback de toggle do editor ────────────────────────────────
+  onEditorToggle((ativo) => {
+    itemEditor.textContent = ativo ? '✕ Sair da edição' : '🛠 Editar ambiente';
+    itemEditor.classList.toggle('active', ativo);
+    itemEditor.setAttribute('aria-pressed', String(ativo));
+  });
+
+  // ── Insere painel no body (posição fixed) ────────────────────────────────
+  document.body.appendChild(panel);
+
+  // ── Abrir / fechar ───────────────────────────────────────────────────────
+  function abrirMenu() {
+    panel.classList.remove('options-panel--hidden');
+    optsBtn.setAttribute('aria-expanded', 'true');
+    optsBtn.classList.add('active');
+    // Posiciona abaixo do botão
+    const rect = optsBtn.getBoundingClientRect();
+    panel.style.top  = (rect.bottom + 6) + 'px';
+    panel.style.right = (window.innerWidth - rect.right) + 'px';
+    panel.style.left = '';
+  }
+
+  function fecharMenu() {
+    panel.classList.add('options-panel--hidden');
+    optsBtn.setAttribute('aria-expanded', 'false');
+    optsBtn.classList.remove('active');
+  }
+
+  optsBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (panel.classList.contains('options-panel--hidden')) {
+      abrirMenu();
+    } else {
+      fecharMenu();
+    }
+  });
+
+  // Fecha ao clicar fora
+  document.addEventListener('click', (e) => {
+    if (!panel.contains(e.target) && e.target !== optsBtn) {
+      fecharMenu();
+    }
+  });
+
+  // Fecha com Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') fecharMenu();
+  });
+
+  // ── API pública: revela seção host (chamada do onWelcome) ────────────────
+  window._optsRevelarHost = () => {
+    secHost.style.display = '';
+  };
 }
 
-injectMobileCamControls();
+/**
+ * Cria um container de seção com título.
+ * @param {string} titulo
+ * @returns {HTMLElement}
+ */
+function criarSecao(titulo) {
+  const sec = document.createElement('div');
+  sec.className = 'options-section';
+  const t = document.createElement('div');
+  t.className = 'options-section__title';
+  t.textContent = titulo;
+  sec.appendChild(t);
+  return sec;
+}
+
+/**
+ * Cria um item de toggle com id, ícone e rótulo.
+ * @param {string} id
+ * @param {string} icon
+ * @param {string} label
+ * @param {boolean} ativo
+ * @returns {HTMLButtonElement}
+ */
+function criarToggleItem(id, icon, label, ativo) {
+  const btn = document.createElement('button');
+  btn.id = id;
+  btn.className = 'options-item options-item--toggle media-btn';
+  btn.setAttribute('aria-pressed', String(ativo));
+  btn.title = (ativo ? 'Desativar ' : 'Ativar ') + label.toLowerCase();
+  btn.textContent = icon + ' ' + label;
+  return btn;
+}
+
+// initOptionsMenu() é chamado após a criação do rtc (abaixo), pois os
+// event handlers dos itens de mídia precisam de rtc.toggleMic/Cam/Screen.
 
 // ── Zoom pelo scroll do mouse ─────────────────────────────────────────────────
 
@@ -268,10 +424,8 @@ canvas.addEventListener('wheel', (e) => {
   // 'full' (mapa inteiro), rolar o scroll leva de volta ao follow.
   if (cameraMode !== 'follow') {
     cameraMode = 'follow';
-    applyCameraMode();
-    const b = document.getElementById('camera-toggle-btn');
-    if (b) b.textContent = '🎥 Câmera';
     try { localStorage.setItem('enterprise_camera', 'follow'); } catch {}
+    applyCameraMode();
   }
   const dir = e.deltaY < 0 ? 1 : -1; // scroll p/ cima = aproxima
   zoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoom + dir * ZOOM_STEP));
@@ -311,12 +465,8 @@ canvas.addEventListener('touchmove', (e) => {
     // Muda para follow se estiver em full
     if (cameraMode !== 'follow') {
       cameraMode = 'follow';
-      applyCameraMode();
-      const b = document.getElementById('camera-toggle-btn');
-      if (b) b.textContent = '🎥 Câmera';
-      const mb = document.getElementById('mob-cam-toggle');
-      if (mb) mb.textContent = '🎥';
       try { localStorage.setItem('enterprise_camera', 'follow'); } catch {}
+      applyCameraMode();
     }
 
     zoom = newZoom;
@@ -407,10 +557,13 @@ registerPlayerGetter(() => player);
 
 // ── WebRTC por proximidade ─────────────────────────────────────────────────────
 
+// Referências lazy: os botões de mídia vivem dentro do painel de opções,
+// que é criado por initOptionsMenu() após este bloco. Usamos getters para
+// resolver os elementos no momento do uso (onStateChange).
 const mediaButtons = {
-  mic:    document.getElementById('mic-toggle-btn'),
-  cam:    document.getElementById('cam-toggle-btn'),
-  screen: document.getElementById('screen-toggle-btn'),
+  get mic()    { return document.getElementById('mic-toggle-btn');    },
+  get cam()    { return document.getElementById('cam-toggle-btn');    },
+  get screen() { return document.getElementById('screen-toggle-btn'); },
 };
 
 const rtc = new RtcManager({
@@ -458,9 +611,12 @@ const rtc = new RtcManager({
   },
 });
 
-mediaButtons.mic    && mediaButtons.mic.addEventListener('click', () => rtc.toggleMic());
-mediaButtons.cam    && mediaButtons.cam.addEventListener('click', () => rtc.toggleCam());
-mediaButtons.screen && mediaButtons.screen.addEventListener('click', () => rtc.toggleScreen());
+// Os listeners de clique dos botões de mídia são registrados dentro de
+// initOptionsMenu() (chamado logo abaixo), que também cria os elementos.
+// Não duplicar aqui — os botões existem só no painel de opções.
+
+// Inicializa o menu de opções (precisa de `rtc` já criado acima)
+initOptionsMenu();
 
 net.onSignal = (from, data) => rtc.handleSignal(from, data);
 
@@ -654,6 +810,13 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'Tab') {
     e.preventDefault();
     debugOverlay = !debugOverlay;
+    // Sincroniza o item de grade dentro do menu de opções
+    const dbgItem = document.getElementById('opts-debug-item');
+    if (dbgItem) {
+      dbgItem.textContent = debugOverlay ? '🔲 Grade: ligada' : '🔳 Grade / diagnóstico';
+      dbgItem.setAttribute('aria-pressed', String(debugOverlay));
+      dbgItem.classList.toggle('active', debugOverlay);
+    }
   }
 });
 
@@ -669,6 +832,8 @@ net.onWelcome = (data) => {
   if (data.isHost === true && !_isHost) {
     _isHost = true;
     initEditor({ net, getCameraState });
+    // Revela a seção "Ambiente" no menu de opções (fail-closed: oculta por padrão)
+    if (typeof window._optsRevelarHost === 'function') window._optsRevelarHost();
   }
 
   const me = (data.players || []).find(p => p.id === net.youId);

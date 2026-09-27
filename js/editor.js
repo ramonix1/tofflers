@@ -111,11 +111,21 @@ let _saveTimer = null;
 /** Elemento do painel lateral do editor */
 let _panelEl = null;
 
-/** Botão de edição no header */
+/**
+ * Botão de edição no header (legado — não é mais criado; mantido para
+ * compatibilidade com o bloco _toggleEditor, que verifica if (_btnEl)).
+ */
 let _btnEl = null;
 
 /** Indicador de "não salvo" */
 let _unsavedIndicatorEl = null;
+
+/**
+ * Callback chamado quando o estado ativo/inativo muda.
+ * Assinado pelo menu de opções em main.js para atualizar o item de menu.
+ * @type {((ativo: boolean) => void)|null}
+ */
+let _onToggleCb = null;
 
 // ── API pública ───────────────────────────────────────────────────────────────
 
@@ -139,6 +149,26 @@ export function initEditor({ net, getCameraState }) {
  */
 export function isEditorAtivo() {
   return _ativo;
+}
+
+/**
+ * Alterna o modo de edição do ambiente (liga/desliga).
+ * Chamado pelo menu de opções em main.js em vez do botão de header interno.
+ * Fail-closed: só funciona se o editor tiver sido inicializado via initEditor()
+ * com isHost=true. Se não inicializado, não faz nada.
+ */
+export function toggleEditorModo() {
+  if (!_net) return; // não foi inicializado = não é host
+  _toggleEditor();
+}
+
+/**
+ * Registra callback para ser notificado quando o estado ativo/inativo muda.
+ * Usado pelo menu de opções em main.js para manter o item de menu sincronizado.
+ * @param {(ativo: boolean) => void} cb
+ */
+export function onEditorToggle(cb) {
+  _onToggleCb = cb;
 }
 
 /**
@@ -183,7 +213,8 @@ export function handlePointerEvent(tipo, e) {
 // ── Criação da UI ─────────────────────────────────────────────────────────────
 
 function _criarUI() {
-  _criarBotaoHeader();
+  // Nota: o botão de header foi movido para o menu de opções em main.js.
+  // O editor apenas cria o painel de paleta flutuante.
   _criarPainel();
 }
 
@@ -320,6 +351,8 @@ function _criarPainel() {
 
 function _toggleEditor() {
   _ativo = !_ativo;
+  // _btnEl sempre null desde que _criarBotaoHeader foi desabilitado; o guard
+  // abaixo não faz nada mas preserva a intenção original caso seja reativado.
   if (_btnEl) {
     _btnEl.classList.toggle('active', _ativo);
     _btnEl.textContent = _ativo ? '✕ Sair da edição' : '🛠 Editar ambiente';
@@ -331,6 +364,8 @@ function _toggleEditor() {
     _hoverCell = { col: -1, row: -1 };
     _dragging = false;
   }
+  // Notifica o menu de opções para atualizar o item de "Editar ambiente"
+  if (_onToggleCb) _onToggleCb(_ativo);
 }
 
 // ── Picking: tela CSS → célula (col, row) ─────────────────────────────────────

@@ -1977,3 +1977,183 @@ body {
   border-color: var(--accent);
   color: var(--accent);
 }
+
+/* ── Menu de Opções ─────────────────────────────────────────────────────── */
+
+/* Botão de opções no header: estado ativo */
+#options-btn.active {
+  background: rgba(99,102,241,0.22);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Painel dropdown de opções */
+.options-panel {
+  position: fixed;
+  top: 60px;    /* sobreposto pelo JS com getBoundingClientRect */
+  right: 16px;
+  width: 230px;
+  background: var(--bg-panel);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  box-shadow: 0 8px 32px rgba(99,102,241,0.25);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* Animação suave de abertura */
+  transition: opacity 0.15s, transform 0.15s;
+  transform-origin: top right;
+}
+
+.options-panel--hidden {
+  display: none !important;
+}
+
+/* Cabeçalho do painel */
+.options-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px 8px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.options-panel__title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Botão X para fechar o painel */
+.options-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 2px 5px;
+  border-radius: var(--radius-sm);
+  line-height: 1;
+  transition: color 0.15s;
+}
+.options-close-btn:hover { color: var(--text-primary); }
+
+/* Seção dentro do painel */
+.options-section {
+  padding: 8px 0 4px;
+  border-bottom: 1px solid var(--border);
+}
+.options-section:last-child { border-bottom: none; }
+
+.options-section__title {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  padding: 0 12px 6px;
+}
+
+/* Item do menu (botão toggle) */
+.options-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 7px 12px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  font-family: inherit;
+  gap: 0;
+}
+
+.options-item:hover {
+  background: rgba(99,102,241,0.10);
+  color: var(--text-primary);
+}
+
+.options-item.active {
+  color: var(--accent);
+}
+
+/* Estado negado (media-btn.denied aplicado pelo onStateChange) */
+.options-item.denied {
+  color: var(--accent-danger);
+}
+
+/* Linha de zoom */
+.options-zoom-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+}
+
+.options-zoom-lbl {
+  font-size: 12px;
+  color: var(--text-secondary);
+  flex: 1;
+}
+
+.options-zoom-note {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.options-zoom-btns {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.options-zoom-btn {
+  width: 28px;
+  height: 28px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.12s, color 0.12s;
+  font-family: inherit;
+}
+
+.options-zoom-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(99,102,241,0.12);
+}
+
+/* Mobile: painel ocupa mais largura */
+@media (max-width: 820px) {
+  .options-panel {
+    width: min(260px, calc(100vw - 24px));
+    right: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .options-panel {
+    right: 8px;
+    width: calc(100vw - 16px);
+  }
+}
+
+/* Remove display:none do #mobile-cam-controls (não existe mais) */
+#mobile-cam-controls { display: none !important; }
