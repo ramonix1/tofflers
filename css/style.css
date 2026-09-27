@@ -1371,9 +1371,12 @@ body {
 */
 
 #dpad {
-  position: absolute;
-  bottom: 16px;
-  left: 16px;
+  /* fixed (não absolute): o #canvas-wrapper rola/é maior que a viewport no
+     mobile; com absolute o D-pad ficava ancorado ao fundo do canvas e saía da
+     tela. fixed prende à viewport. safe-area evita ficar sob a barra do celular. */
+  position: fixed;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  left: calc(16px + env(safe-area-inset-left, 0px));
   display: grid;
   grid-template-columns: 54px 54px 54px;
   grid-template-rows: 54px 54px;
@@ -1389,9 +1392,9 @@ body {
 
 /* Botão Correr */
 #run-btn {
-  position: absolute;
-  bottom: 16px;
-  right: 16px;
+  position: fixed;
+  bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  right: calc(16px + env(safe-area-inset-right, 0px));
   z-index: 50;
   min-width: 70px;
   min-height: 54px;
@@ -1701,6 +1704,9 @@ body {
   /* ── touch-action no canvas (evita scroll/zoom da página ao jogar) ── */
   #canvas-wrapper {
     touch-action: none;
+    /* Sem scroll no mobile: a câmera (follow) centraliza o jogador; se o wrapper
+       rolasse, o convidado via um canto vazio em vez do próprio avatar. */
+    overflow: hidden;
   }
 
   #office-canvas {
@@ -1726,8 +1732,8 @@ body {
     grid-template-columns: 48px 48px 48px;
     grid-template-rows: 48px 48px 48px;
     gap: 3px;
-    bottom: 12px;
-    left: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    left: calc(12px + env(safe-area-inset-left, 0px));
   }
 
   .dpad-btn {
@@ -1739,8 +1745,8 @@ body {
   #run-btn {
     min-width: 60px;
     min-height: 48px;
-    bottom: 12px;
-    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    right: calc(12px + env(safe-area-inset-right, 0px));
     font-size: 11px;
   }
 
