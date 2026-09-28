@@ -1162,10 +1162,24 @@ if (qName && VALID_ROLES.includes(qRole)) {
   const entryBtn  = document.getElementById('entry-btn');
   const entryName = document.getElementById('entry-name');
   const entryRole = document.getElementById('entry-role');
+  const entryRoleCustom = document.getElementById('entry-role-custom');
+
+  // "Outra…": revela o campo para digitar uma função personalizada.
+  // Vale só na sessão (o servidor guarda em memória; ao sair, some — não persiste).
+  if (entryRoleCustom) {
+    entryRole.addEventListener('change', () => {
+      const custom = entryRole.value === '__outra__';
+      entryRoleCustom.style.display = custom ? 'block' : 'none';
+      if (custom) entryRoleCustom.focus();
+    });
+  }
 
   function doJoin() {
     const name = sanitize(entryName.value);
-    const role = entryRole.value;
+    let role = entryRole.value;
+    if (role === '__outra__') {
+      role = (entryRoleCustom && sanitize(entryRoleCustom.value)) || 'Convidado';
+    }
     if (!name) {
       entryName.focus();
       entryName.style.borderColor = 'var(--accent-danger)';
@@ -1180,6 +1194,11 @@ if (qName && VALID_ROLES.includes(qRole)) {
   entryName.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') doJoin();
   });
+  if (entryRoleCustom) {
+    entryRoleCustom.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') doJoin();
+    });
+  }
 
   entryName.focus();
 
