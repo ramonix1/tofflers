@@ -63,8 +63,8 @@
       },
       {
         "floor": "floor",
-        "solid": true,
-        "object": "wall"
+        "solid": false,
+        "object": "wall-door"
       },
       {
         "floor": "floor",
@@ -134,39 +134,34 @@
         "object": "wall"
       },
       {
-        "floor": "floor-corner",
-        "solid": false,
-        "object": null
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
       },
       {
-        "floor": "floor-corner",
-        "solid": false,
-        "object": null
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
       },
       {
-        "floor": "floor-corner",
-        "solid": false,
-        "object": null
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
       },
       {
-        "floor": "floor-corner",
-        "solid": false,
-        "object": null
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
       },
       {
-        "floor": "floor-corner",
-        "solid": false,
-        "object": null
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
       },
       {
-        "floor": "floor-corner",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-corner",
-        "solid": false,
-        "object": null
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
       },
       {
         "floor": "floor",
@@ -210,43 +205,48 @@
       },
       {
         "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
         "solid": true,
         "object": "wall"
       },
       {
-        "floor": "floor-detail",
-        "solid": false,
-        "object": null
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
       },
       {
-        "floor": "floor-detail",
-        "solid": false,
-        "object": null
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
       },
       {
-        "floor": "floor-detail",
-        "solid": false,
-        "object": null
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
       },
       {
-        "floor": "floor-detail",
-        "solid": false,
-        "object": null
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
       },
       {
-        "floor": "floor-detail",
-        "solid": false,
-        "object": null
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
       },
       {
-        "floor": "floor-detail",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-detail",
-        "solid": false,
-        "object": null
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
       },
       {
         "floor": "floor",
@@ -261,19 +261,136 @@
         "object": "wall"
       },
       {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
         "floor": "floor-corner",
+        "solid": true,
+        "object": "container"
+      },
+      {
+        "floor": "floor-corner",
+        "solid": true,
+        "object": "container"
+      },
+      {
+        "floor": "floor-corner",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor-corner",
+        "solid": true,
+        "object": "container"
+      },
+      {
+        "floor": "floor-corner",
+        "solid": true,
+        "object": "container"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
         "solid": false,
         "object": null
       },
       {
         "floor": "floor",
         "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor-detail",
+        "solid": true,
+        "object": "container"
+      },
+      {
+        "floor": "floor-detail",
+        "solid": true,
+        "object": "container"
+      },
+      {
+        "floor": "floor-detail",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor-detail",
+        "solid": true,
+        "object": "container"
+      },
+      {
+        "floor": "floor-detail",
+        "solid": true,
         "object": "container"
       },
       {
         "floor": "floor",
         "solid": true,
-        "object": "container"
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      }
+    ],
+    [
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
       },
       {
         "floor": "floor-corner",
@@ -281,14 +398,19 @@
         "object": null
       },
       {
-        "floor": "floor",
-        "solid": true,
-        "object": "container"
+        "floor": "floor-corner",
+        "solid": false,
+        "object": null
       },
       {
-        "floor": "floor",
-        "solid": true,
-        "object": "container"
+        "floor": "floor-corner",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor-corner",
+        "solid": false,
+        "object": null
       },
       {
         "floor": "floor-corner",
@@ -312,8 +434,8 @@
       },
       {
         "floor": "floor",
-        "solid": true,
-        "object": "table"
+        "solid": false,
+        "object": null
       },
       {
         "floor": "floor",
@@ -322,8 +444,18 @@
       },
       {
         "floor": "floor",
-        "solid": true,
-        "object": "table"
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
       },
       {
         "floor": "floor",
@@ -351,29 +483,24 @@
         "object": null
       },
       {
-        "floor": "floor",
+        "floor": "floor-detail",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor-detail",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor-detail",
         "solid": true,
         "object": "structure"
       },
       {
-        "floor": "floor-detail",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-detail",
-        "solid": false,
-        "object": null
-      },
-      {
         "floor": "floor",
         "solid": true,
-        "object": "structure"
-      },
-      {
-        "floor": "floor-detail",
-        "solid": false,
-        "object": null
+        "object": "wall"
       },
       {
         "floor": "floor",
@@ -388,258 +515,19 @@
         "object": "wall"
       },
       {
-        "floor": "floor-corner",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-corner",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-corner",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-corner",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-corner",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-corner",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-corner",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": "chair"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": "chair"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor-detail",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-detail",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-detail",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-detail",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-detail",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-detail",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-detail",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      }
-    ],
-    [
-      {
         "floor": "floor",
         "solid": true,
         "object": "wall"
       },
       {
         "floor": "floor-corner",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "structure"
-      },
-      {
-        "floor": "floor-corner",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-corner",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-corner",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
         "solid": true,
         "object": "structure"
       },
       {
         "floor": "floor-corner",
         "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "table"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "table"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor-detail",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "container"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "container"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "container"
-      },
-      {
-        "floor": "floor-detail",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-detail",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-detail",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      }
-    ],
-    [
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
+        "object": "chair"
       },
       {
         "floor": "floor-corner",
@@ -649,1404 +537,17 @@
       {
         "floor": "floor-corner",
         "solid": false,
-        "object": null
+        "object": "chair"
       },
       {
         "floor": "floor-corner",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-corner",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-corner",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-corner",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-corner",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": "chair"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": "chair"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor-detail",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-detail",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-detail",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-detail",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-detail",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-detail",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-detail",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      }
-    ],
-    [
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor-corner",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor-detail",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      }
-    ],
-    [
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-detail",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      }
-    ],
-    [
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "table"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": "chair"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "table"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-panel",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-panel",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-panel",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-panel",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-panel",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-detail",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "table"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": "chair"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "table"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      }
-    ],
-    [
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": "chair"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": "chair"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-panel",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-panel",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-panel",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-panel",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-panel",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-detail",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": "chair"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": "chair"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      }
-    ],
-    [
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "table"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": "chair"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "table"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-panel",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "table"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "table"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "table"
-      },
-      {
-        "floor": "floor-panel",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "table"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": "chair"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "table"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      }
-    ],
-    [
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-panel",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": "chair"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": "chair"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": "chair"
-      },
-      {
-        "floor": "floor-panel",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      }
-    ],
-    [
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "table"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": "chair"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "table"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-panel",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-panel",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-panel",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-panel",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-panel",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "table"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": "chair"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "table"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      }
-    ],
-    [
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": "chair"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": "chair"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-panel",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-panel",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-panel",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-panel",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-panel",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": "chair"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": "chair"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      }
-    ],
-    [
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "table"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": "chair"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "table"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "table"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": "chair"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "table"
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      }
-    ],
-    [
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      }
-    ],
-    [
-      {
-        "floor": "floor",
-        "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
         "solid": true,
         "object": "structure"
       },
       {
         "floor": "floor",
-        "solid": false,
-        "object": null
+        "solid": true,
+        "object": "wall"
       },
       {
         "floor": "floor",
@@ -2092,6 +593,180 @@
         "floor": "floor",
         "solid": false,
         "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor-detail",
+        "solid": true,
+        "object": "bed-single"
+      },
+      {
+        "floor": "floor-detail",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor-detail",
+        "solid": false,
+        "object": "chair"
+      },
+      {
+        "floor": "floor-detail",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor-detail",
+        "solid": false,
+        "object": "chair"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      }
+    ],
+    [
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": "wall-door"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": "wall-door"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      }
+    ],
+    [
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
       },
       {
         "floor": "floor",
@@ -2155,6 +830,1331 @@
       },
       {
         "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "structure"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      }
+    ],
+    [
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "structure"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "structure"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      }
+    ],
+    [
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": "wall-door"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": "wall-door"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": "wall-door"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      }
+    ],
+    [
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "table"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "table"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "table"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "table"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor-panel",
+        "solid": false,
+        "object": "chair"
+      },
+      {
+        "floor": "floor-panel",
+        "solid": false,
+        "object": "chair"
+      },
+      {
+        "floor": "floor-panel",
+        "solid": false,
+        "object": "chair"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "table"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "table"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "table"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "table"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      }
+    ],
+    [
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "computer"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": "chair"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "computer"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": "chair"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor-panel",
+        "solid": true,
+        "object": "table"
+      },
+      {
+        "floor": "floor-panel",
+        "solid": true,
+        "object": "table"
+      },
+      {
+        "floor": "floor-panel",
+        "solid": true,
+        "object": "table"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "computer"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": "chair"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "computer"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": "chair"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      }
+    ],
+    [
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor-panel",
+        "solid": false,
+        "object": "chair"
+      },
+      {
+        "floor": "floor-panel",
+        "solid": false,
+        "object": "chair"
+      },
+      {
+        "floor": "floor-panel",
+        "solid": false,
+        "object": "chair"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      }
+    ],
+    [
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "table"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "table"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "table"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "table"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor-panel",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor-panel",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor-panel",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "table"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "table"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "table"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "table"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      }
+    ],
+    [
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "computer"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": "chair"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "computer"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": "chair"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "computer"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": "chair"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "computer"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": "chair"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      }
+    ],
+    [
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "table"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "table"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "table"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "table"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "table"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "table"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "table"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "table"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      }
+    ],
+    [
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "computer"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": "chair"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "computer"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": "chair"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "computer"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": "chair"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "computer"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": "chair"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      }
+    ],
+    [
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": "wall-door"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": null
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": false,
+        "object": "wall-door"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
         "solid": true,
         "object": "wall"
       }
@@ -2183,77 +2183,12 @@
       {
         "floor": "floor",
         "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor-corner",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
-      },
-      {
-        "floor": "floor",
-        "solid": false,
-        "object": null
+        "object": "wall-window"
       },
       {
         "floor": "floor",
         "solid": true,
-        "object": "wall"
-      },
-      {
-        "floor": "floor-corner",
-        "solid": false,
-        "object": null
+        "object": "wall-window"
       },
       {
         "floor": "floor",
@@ -2264,6 +2199,71 @@
         "floor": "floor",
         "solid": true,
         "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall-window"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall-window"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall-window"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall-window"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall-window"
+      },
+      {
+        "floor": "floor",
+        "solid": true,
+        "object": "wall-window"
       },
       {
         "floor": "floor",
@@ -2293,7 +2293,7 @@
       "x": 32,
       "y": 32,
       "w": 224,
-      "h": 192,
+      "h": 160,
       "color": "rgba(99,102,241,0.06)"
     },
     "copa": {
@@ -2301,24 +2301,8 @@
       "x": 544,
       "y": 32,
       "w": 224,
-      "h": 224,
+      "h": 160,
       "color": "rgba(34,197,94,0.06)"
-    },
-    "devA": {
-      "label": "Estações Dev",
-      "x": 32,
-      "y": 224,
-      "w": 224,
-      "h": 256,
-      "color": "rgba(59,130,246,0.06)"
-    },
-    "devB": {
-      "label": "Estações Dev",
-      "x": 672,
-      "y": 224,
-      "w": 96,
-      "h": 256,
-      "color": "rgba(59,130,246,0.06)"
     },
     "reuniao": {
       "label": "Sala de Reunião",
@@ -2327,6 +2311,22 @@
       "w": 160,
       "h": 192,
       "color": "rgba(168,85,247,0.10)"
+    },
+    "devA": {
+      "label": "Estações Dev A",
+      "x": 32,
+      "y": 256,
+      "w": 224,
+      "h": 288,
+      "color": "rgba(59,130,246,0.06)"
+    },
+    "devB": {
+      "label": "Estações Dev B",
+      "x": 544,
+      "y": 256,
+      "w": 224,
+      "h": 288,
+      "color": "rgba(59,130,246,0.06)"
     }
   }
 }
