@@ -59,6 +59,13 @@ export class RtcManager {
     this._tileZ = 200;
     /** Contador para escalonar a posição inicial de novos tiles. */
     this._tileSpawnN = 0;
+
+    // Autoplay policy: cria/retoma o AudioContext em QUALQUER gesto do usuário.
+    // Sem isso, quem só ESCUTA (não ligou o mic) fica com o contexto suspenso e
+    // não ouve os outros (o áudio remoto toca via WebAudio, com o <audio> mudo).
+    const _resumeAudio = () => { try { this._ensureAudioCtx(); } catch { /* noop */ } };
+    document.addEventListener('pointerdown', _resumeAudio, { passive: true });
+    document.addEventListener('keydown', _resumeAudio, { passive: true });
   }
 
   /** ID do jogador local (só existe após o welcome). */
