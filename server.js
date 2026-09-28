@@ -271,10 +271,13 @@ function playersSnapshot() {
  * Pontos de spawn em piso livre, espalhados pelo centro do escritório.
  * Evita empilhar todos os jogadores no mesmo pixel (senão um fica escondido embaixo do outro).
  */
+// Spawns em células "fundo-aberto" (livres com os 8 vizinhos livres), no salão
+// de cima e na faixa aberta de baixo — ninguém nasce colado/atrás de parede.
+// (col*32+16, row*32+16). Ver mapa em tools/gen-layout.mjs.
 const SPAWN_POINTS = [
-  { x: 176, y: 240 }, { x: 272, y: 240 }, { x: 592, y: 240 },
-  { x: 176, y: 368 }, { x: 528, y: 368 }, { x: 272, y: 432 },
-  { x: 496, y: 432 }, { x: 208, y: 496 }, { x: 400, y: 496 }, { x: 656, y: 496 },
+  { x: 336, y: 80 },  { x: 432, y: 80 },  { x: 304, y: 112 },
+  { x: 464, y: 112 }, { x: 368, y: 144 }, { x: 496, y: 144 },
+  { x: 400, y: 208 }, { x: 304, y: 496 }, { x: 400, y: 496 }, { x: 496, y: 496 },
 ];
 function pickSpawn() {
   const existing = [...players.values()];
