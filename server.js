@@ -9,6 +9,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { spawn } from 'node:child_process';
+import { DatabaseSync } from 'node:sqlite';
 import { getZoneAt, MAP, ZONES } from './js/office.js';
 import { AUDIO_RADIUS } from './js/spatial.js';
 import { generateSeedLayout } from './js/layout.js';
@@ -18,6 +19,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const STATIC_ROOT = __dirname;
 const DATA_DIR = path.join(__dirname, 'data');
 const STATE_FILE  = path.join(DATA_DIR, 'state.json');
+// Banco (SQLite embutido do Node) — arquivo histórico das sessões de chat.
+const DB_FILE     = path.join(DATA_DIR, 'toffies.db');
+// Início desta sessão (= processo). O chat é EFÊMERO por sessão: nasce vazio a
+// cada boot e, no encerramento, é arquivado no SQLite.
+const SESSION_STARTED = Date.now();
 const LAYOUT_FILE = path.join(DATA_DIR, 'layout.json');
 
 // ─── MIME types ───────────────────────────────────────────────────────────────
@@ -69,6 +75,11 @@ function loadState() {
     const raw = fs.readFileSync(STATE_FILE, 'utf8');
     const parsed = JSON.parse(raw);
     state = parsed;
+    // Demandas e sprint PERSISTEM entre sessões. O CHAT NÃO: é efêmero por
+    // sessão — sempre começa vazio (a sessão anterior foi arquivada no SQLite).
+    state.chat = { geral: [], dm: {} };
+    state.demandas = state.demandas || [];
+    state.sprint = state.sprint || {};
     // Recalcular contador de demandas a partir dos IDs existentes
     for (const d of (state.demandas || [])) {
       const m = String(d.id || '').match(/^D-(\d+)$/);
@@ -77,7 +88,7 @@ function loadState() {
         if (n > demandaCounter) demandaCounter = n;
       }
     }
-    console.log(`[state] Carregado: ${state.chat.geral.length} msgs geral, ${state.demandas.length} demandas`);
+    console.log(`[state] Carregado: ${state.demandas.length} demandas (chat inicia vazio — efêmero por sessão)`);
   } catch (err) {
     console.error('[state] JSON corrompido ou inválido — iniciando estado vazio:', err.message);
     state = { chat: { geral: [], dm: {} }, demandas: [], sprint: {} };
@@ -91,11 +102,81 @@ function scheduleSave() {
     saveTimer = null;
     ensureDataDir();
     try {
-      fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), 'utf8');
+      // Persiste APENAS demandas + sprint. O chat é efêmero por sessão (não vai
+      // para o state.json; é arquivado no SQLite ao encerrar).
+      const persistivel = { demandas: state.demandas, sprint: state.sprint };
+      fs.writeFileSync(STATE_FILE, JSON.stringify(persistivel, null, 2), 'utf8');
     } catch (err) {
       console.error('[state] Erro ao gravar state.json:', err.message);
     }
   }, 500);
+}
+
+// ─── Banco SQLite: arquivo histórico das sessões de chat ─────────────────────
+let db = null;
+function initDb() {
+  try {
+    ensureDataDir();
+    db = new DatabaseSync(DB_FILE);
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS sessions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        started_at INTEGER NOT NULL,
+        ended_at   INTEGER NOT NULL,
+        message_count INTEGER NOT NULL
+      );
+      CREATE TABLE IF NOT EXISTS messages (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        session_id INTEGER NOT NULL,
+        channel TEXT NOT NULL,
+        dm_key  TEXT,
+        from_id TEXT,
+        name    TEXT,
+        role    TEXT,
+        text    TEXT,
+        ts      INTEGER
+      );
+    `);
+  } catch (err) {
+    console.error('[db] Falha ao abrir/criar o SQLite:', err.message);
+    db = null;
+  }
+}
+
+let _archived = false;
+/**
+ * Arquiva a conversa desta sessão no SQLite e retorna. Idempotente.
+ * Chamado no encerramento (SIGTERM/SIGINT/exit). Síncrono (DatabaseSync),
+ * seguro para rodar em handler de saída.
+ */
+function archiveSession() {
+  if (_archived) return;
+  _archived = true;
+  try {
+    if (!db) initDb();
+    if (!db) return;
+    const geral = (state.chat && state.chat.geral) || [];
+    const dm    = (state.chat && state.chat.dm)    || {};
+    const dmMsgs = [];
+    for (const [key, arr] of Object.entries(dm)) {
+      for (const m of (arr || [])) dmMsgs.push({ ...m, dm_key: key });
+    }
+    const total = geral.length + dmMsgs.length;
+    if (total === 0) return; // sessão sem conversa — nada a arquivar
+    const endedAt = Date.now();
+    const sres = db.prepare(
+      'INSERT INTO sessions (started_at, ended_at, message_count) VALUES (?,?,?)'
+    ).run(SESSION_STARTED, endedAt, total);
+    const sessionId = Number(sres.lastInsertRowid);
+    const ins = db.prepare(
+      'INSERT INTO messages (session_id, channel, dm_key, from_id, name, role, text, ts) VALUES (?,?,?,?,?,?,?,?)'
+    );
+    for (const m of geral)  ins.run(sessionId, 'geral', null,      m.from || null, m.name || null, m.role || null, m.text || '', m.ts || endedAt);
+    for (const m of dmMsgs) ins.run(sessionId, 'dm',    m.dm_key,   m.from || null, m.name || null, m.role || null, m.text || '', m.ts || endedAt);
+    console.log(`[archive] Sessão ${sessionId} arquivada no SQLite: ${total} mensagens.`);
+  } catch (err) {
+    console.error('[archive] Falha ao arquivar sessão:', err.message);
+  }
 }
 
 // ─── Layout ───────────────────────────────────────────────────────────────────
@@ -573,6 +654,7 @@ function serveStatic(req, res) {
 // ─── Boot ─────────────────────────────────────────────────────────────────────
 loadState();
 loadLayout();
+initDb();
 
 const server = http.createServer((req, res) => {
   try {
@@ -701,9 +783,10 @@ server.listen(8080, () => {
 
 // ─── Encerramento limpo: mata o túnel se estiver rodando ─────────────────────
 function shutdown() {
+  archiveSession(); // arquiva a conversa desta sessão no SQLite antes de sair
   stopTunnel();
   process.exit(0);
 }
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
-process.on('exit', () => { stopTunnel(); });
+process.on('exit', () => { archiveSession(); stopTunnel(); });
