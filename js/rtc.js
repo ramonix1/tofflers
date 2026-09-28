@@ -72,6 +72,18 @@ export class RtcManager {
     const _resumeAudio = () => { try { this._ensureAudioCtx(); } catch { /* noop */ } };
     document.addEventListener('pointerdown', _resumeAudio, { passive: true });
     document.addEventListener('keydown', _resumeAudio, { passive: true });
+
+    // Diagnóstico: digite rtcPeers() no console para ver o estado de cada conexão.
+    try {
+      window.rtcPeers = () => [...this.peers.entries()].map(([id, p]) => ({
+        id,
+        conn: p.pc.connectionState,
+        ice: p.pc.iceConnectionState,
+        gain: Number(p.gainTarget.toFixed(2)),
+        senders: Object.entries(p.senders).filter(([, s]) => s).map(([k]) => k).join(',') || '(nenhum)',
+      }));
+      window.rtcAudioCtx = () => this.audioCtx && this.audioCtx.state;
+    } catch { /* noop */ }
   }
 
   /** ID do jogador local (só existe após o welcome). */
@@ -112,11 +124,13 @@ export class RtcManager {
       _teardown: null,
     };
     this.peers.set(id, peer);
+    console.log(`[rtc] ▶ NOVA conexão com ${id} (polite=${polite})`);
 
     pc.onnegotiationneeded = async () => {
       try {
         peer.makingOffer = true;
         await pc.setLocalDescription();
+        console.log(`[rtc] → enviando OFFER/negociação para ${id}`);
         this.net.sendSignal(id, { description: pc.localDescription });
       } catch (err) {
         console.error('[rtc] negotiationneeded falhou:', err);
@@ -126,15 +140,25 @@ export class RtcManager {
     };
 
     pc.onicecandidate = ({ candidate }) => {
-      if (candidate) this.net.sendSignal(id, { candidate });
+      if (candidate) {
+        // candidate.type: host (local) | srflx (STUN) | relay (TURN funcionando!)
+        console.log(`[rtc] ICE local ${id}: ${candidate.type}/${candidate.protocol}`);
+        this.net.sendSignal(id, { candidate });
+      }
     };
 
     pc.onsignalingstatechange = () => {
       if (pc.signalingState === 'stable') this._sendMeta(peer);
     };
 
+    pc.oniceconnectionstatechange = () => {
+      console.log(`[rtc] iceConnectionState ${id}: ${pc.iceConnectionState}`);
+    };
+
     pc.onconnectionstatechange = () => {
+      console.log(`[rtc] connectionState ${id}: ${pc.connectionState}`);
       if (pc.connectionState === 'failed') {
+        console.warn(`[rtc] ✖ conexão com ${id} FALHOU (provável NAT sem TURN válido)`);
         try { pc.restartIce(); } catch { /* noop */ }
       }
     };
