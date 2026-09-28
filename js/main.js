@@ -320,6 +320,7 @@ function initOptionsMenu() {
   itemEditor.textContent = '🛠 Editar ambiente';
   itemEditor.addEventListener('click', () => {
     toggleEditorModo();
+    fecharMenu(); // fecha o menu de opções ao entrar/sair da edição (não fica travado no caminho)
     // Estado visual atualizado via onEditorToggle callback (abaixo)
   });
   secHost.appendChild(itemEditor);
@@ -629,10 +630,12 @@ function initMediaDock() {
   if (document.getElementById('media-dock')) return;
   const st = document.createElement('style');
   st.textContent = `
-    #media-dock { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%);
-      display: flex; gap: 8px; padding: 6px 10px; z-index: 60;
-      background: rgba(20,23,34,0.9); border: 1px solid var(--border); border-radius: 999px;
-      box-shadow: 0 6px 20px rgba(0,0,0,0.45); backdrop-filter: blur(6px); }
+    #media-dock { position: fixed; z-index: 60;
+      display: flex; align-items: center; gap: 8px; padding: 6px 8px 6px 4px;
+      background: rgba(20,23,34,0.92); border: 1px solid var(--border); border-radius: 999px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.45); backdrop-filter: blur(6px); touch-action: none; }
+    #media-dock .dock-grip { cursor: grab; color: var(--text-muted); font-size: 15px; padding: 0 3px; user-select: none; line-height: 1; }
+    #media-dock .dock-grip:active { cursor: grabbing; }
     #media-dock .dock-btn { width: 42px; height: 42px; border-radius: 50%;
       border: 1px solid var(--border); background: rgba(148,163,184,0.12);
       color: var(--text-primary); font-size: 19px; line-height: 1; cursor: pointer;
@@ -640,12 +643,19 @@ function initMediaDock() {
     #media-dock .dock-btn:hover { background: rgba(148,163,184,0.28); }
     #media-dock .dock-btn.active { background: rgba(99,102,241,0.35); border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
     #media-dock .dock-btn.denied { border-color: var(--accent-danger,#ef4444); color: var(--accent-danger,#ef4444); }
-    @media (max-width: 820px) { #media-dock { bottom: calc(10px + env(safe-area-inset-bottom,0px)); } }
   `;
   document.head.appendChild(st);
 
   const dock = document.createElement('div');
   dock.id = 'media-dock';
+
+  // Alça de arraste
+  const grip = document.createElement('span');
+  grip.className = 'dock-grip';
+  grip.textContent = '⠿';
+  grip.title = 'Arraste para reposicionar';
+  dock.appendChild(grip);
+
   const defs = [
     { kind: 'mic',    icon: '🎤', label: 'microfone',        fn: () => rtc.toggleMic() },
     { kind: 'cam',    icon: '📹', label: 'câmera',           fn: () => rtc.toggleCam() },
@@ -662,6 +672,39 @@ function initMediaDock() {
     dock.appendChild(b);
   }
   document.body.appendChild(dock);
+
+  // Posição: restaura do localStorage, ou default no TOPO-centro (longe da dica
+  // de mover, que fica no rodapé). É arrastável para qualquer lugar.
+  const clampL = (x) => Math.min(window.innerWidth  - 48, Math.max(0, x));
+  const clampT = (y) => Math.min(window.innerHeight - 44, Math.max(0, y));
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem('toffies_dock_pos')); } catch {}
+  if (saved && typeof saved.left === 'number') {
+    dock.style.left = clampL(saved.left) + 'px';
+    dock.style.top  = clampT(saved.top)  + 'px';
+  } else {
+    dock.style.left = Math.max(8, (window.innerWidth - dock.offsetWidth) / 2) + 'px';
+    dock.style.top  = '60px';
+  }
+
+  // Arrastar pela alça ou pelo fundo do dock (nunca pelos botões).
+  dock.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('.dock-btn')) return;
+    e.preventDefault();
+    const r = dock.getBoundingClientRect();
+    const offX = e.clientX - r.left, offY = e.clientY - r.top;
+    const move = (ev) => {
+      dock.style.left = clampL(ev.clientX - offX) + 'px';
+      dock.style.top  = clampT(ev.clientY - offY) + 'px';
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      try { localStorage.setItem('toffies_dock_pos', JSON.stringify({ left: parseInt(dock.style.left, 10), top: parseInt(dock.style.top, 10) })); } catch {}
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  });
 }
 initMediaDock();
 

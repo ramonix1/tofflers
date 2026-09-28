@@ -273,6 +273,14 @@ function _criarPainel() {
   btnSalvar.addEventListener('click', () => _salvar());
   header.appendChild(btnSalvar);
 
+  // Sair do modo edição direto pelo painel (sem precisar reabrir o menu de opções)
+  const btnSair = document.createElement('button');
+  btnSair.className = 'editor-btn';
+  btnSair.textContent = '✕ Sair';
+  btnSair.title = 'Sair do modo edição';
+  btnSair.addEventListener('click', () => { if (_ativo) _toggleEditor(); });
+  header.appendChild(btnSair);
+
   _panelEl.appendChild(header);
 
   // Categorias de paleta
