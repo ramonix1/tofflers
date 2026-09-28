@@ -1,62 +1,105 @@
 /**
- * office-iso.js — Render isométrico do escritório.
+ * office-iso.js — Render isométrico PROCEDURAL do escritório.
  *
- * Importa o layout unificado (layout.js) ou faz fallback ao MAP/ZONES de
- * office.js caso o layout ainda não tenha chegado do servidor.
+ * Não usa sprites de ambiente (piso/parede): tudo é desenhado com formas de
+ * canvas para garantir encaixe perfeito na grade isométrica sem vãos, sem
+ * objetos flutuando e com o clique do editor coincidindo com o visual.
  *
- * Paredes são auto-orientadas pela vizinhança de células sólidas:
- *   - Parede reta eixo X → wall.png (espelhado)
- *   - Parede reta eixo Y → wall.png (normal)
- *   - Canto             → wall-corner.png + flips por quadrante
- *   - Pillar isolado    → wall-pillar.png
+ * Geometria de uma célula (col, row):
+ *   WT = WORLD_TILE = 32 px de mundo
+ *   N (topo)    = worldToScreen(col*WT,     row*WT)
+ *   E (direita) = worldToScreen((col+1)*WT, row*WT)
+ *   S (baixo)   = worldToScreen((col+1)*WT, (row+1)*WT)
+ *   W (esq.)    = worldToScreen(col*WT,     (row+1)*WT)
  *
- * Âncora WYSIWYG: o pé do sprite de parede (bottom) assenta exatamente na
- * ponta inferior do losango do piso da célula → colisão == visual.
+ * Os 4 pontos tesselam perfeitamente com os vizinhos.
+ * O "topo" do losango (N) coincide com o sy calculado por tileScreen(col,row)
+ * — mesma referência usada pelo _desenharDestaque do editor.
+ *
+ * ┌─ CONSTANTES DE COR (afine aqui) ──────────────────────────────────────────┐
+ * │  FLOOR_BASE      — piso genérico (azul-acinzentado escuro)                 │
+ * │  FLOOR_GRID      — linha de grade do piso (bem sutil)                      │
+ * │  WALL_TOP        — face superior do prisma de parede (claro)               │
+ * │  WALL_SIDE_SW    — face frontal SW (sombra mais escura)                    │
+ * │  WALL_SIDE_SE    — face frontal SE (sombra intermediária)                  │
+ * │  FURNITURE_*     — cores dos móveis                                        │
+ * └───────────────────────────────────────────────────────────────────────────┘
  */
 
 import { MAP, ZONES, TILE, COLS, ROWS } from './office.js';
 import { getLayout } from './layout.js';
 import {
-  TW, TH, ORIGIN_X, ORIGIN_Y,
-  WALL_SPRITE_H, WALL_FOOT_OFFSET, FLOOR_FILL_SCALE, FLOOR_TOP_ADJUST,
+  TW, TH, ORIGIN_X, ORIGIN_Y, WORLD_TILE,
+  WALL_H,
   worldToScreen, depthKey,
+  // importados mas não mais usados ativamente — mantidos para não quebrar
+  // qualquer import externo que reexporte daqui
+  WALL_SPRITE_H, WALL_FOOT_OFFSET, FLOOR_FILL_SCALE, FLOOR_TOP_ADJUST,
 } from './iso.js';
 
-// ─── Cache de imagens ─────────────────────────────────────────────────────────
+// ─── Paleta de cores (constantes — ajuste fino aqui) ─────────────────────────
 
-/** @type {Map<string, HTMLImageElement>} */
-const IMG = new Map();
+/** Piso padrão: cinza-azulado escuro, combinando com o tema dark */
+const FLOOR_BASE       = '#1e2235';
+/** Piso com detalhe (ex.: floor-detail, floor-panel) */
+const FLOOR_DETAIL     = '#252a40';
+/** Piso de varanda / canto */
+const FLOOR_CORNER     = '#1c2030';
+/** Linha de grade do piso (sutil) */
+const FLOOR_GRID       = 'rgba(255,255,255,0.06)';
 
-/**
- * Carrega uma imagem de assets/iso/<name>.png e guarda em cache.
- * Retorna a imagem (pode ainda estar carregando — canvas a ignora com graça).
- * @param {string} name
- * @returns {HTMLImageElement}
- */
-function img(name) {
-  if (IMG.has(name)) return IMG.get(name);
-  const el = new Image();
-  el.src = `assets/iso/${name}.png`;
-  IMG.set(name, el);
-  return el;
-}
+/** Topo do prisma de parede (face mais clara — "céu") */
+const WALL_TOP         = '#3a4060';
+/** Face frontal SW da parede (sombra mais escura) */
+const WALL_SIDE_SW     = '#222640';
+/** Face frontal SE da parede (sombra intermediária) */
+const WALL_SIDE_SE     = '#2a3050';
 
-// Pré-carrega os sprites mais usados
-const PRELOAD = [
-  'floor', 'floor-corner', 'floor-detail', 'floor-panel',
-  'wall', 'wall-corner', 'wall-corner-round', 'wall-pillar',
-  'table', 'table-large', 'chair', 'chair-armrest',
-  'computer', 'computer-screen',
-  'container', 'structure',
-  'door-single', 'door-single-closed',
-];
-PRELOAD.forEach(img);
+/** Topo do prisma de porta — mais baixo, tom diferente */
+const DOOR_TOP         = '#2e3555';
+/** Lateral da porta */
+const DOOR_SIDE        = '#1a1f35';
+/** Altura do sill da porta (px de tela) — menor que WALL_H */
+const DOOR_H           = 8;
+
+/** Mesa: superfície e lateral */
+const TABLE_TOP        = '#5a3e28';
+const TABLE_SIDE_SW    = '#3a2718';
+const TABLE_SIDE_SE    = '#4a3220';
+/** Altura da mesa (px de tela) */
+const TABLE_H          = 10;
+
+/** Cadeira: assento e lateral */
+const CHAIR_TOP        = '#2e4a6e';
+const CHAIR_SIDE       = '#1e3050';
+/** Altura da cadeira */
+const CHAIR_H          = 7;
+
+/** Computador */
+const COMPUTER_TOP     = '#1a2a3a';
+const COMPUTER_SIDE    = '#111a25';
+const COMPUTER_H       = 14;
+
+/** Container/balcão */
+const CONTAINER_TOP    = '#3a3a4a';
+const CONTAINER_SIDE_SW = '#222230';
+const CONTAINER_SIDE_SE = '#2e2e40';
+const CONTAINER_H      = 14;
+
+/** Estrutura / planta decorativa */
+const STRUCTURE_TOP    = '#2e5c2e';
+const STRUCTURE_SIDE   = '#1e3c1e';
+const STRUCTURE_H      = 18;
+
+/** Janela: tom levemente azulado translúcido no topo */
+const WINDOW_TOP       = '#3a5080';
+const WINDOW_SIDE      = '#28406a';
+const WINDOW_H         = WALL_H;
 
 // ─── Helpers de acesso ao modelo de layout ────────────────────────────────────
 
 /**
  * Retorna true se a célula (col, row) for sólida.
- * Usa o modelo de layout quando disponível; fallback para MAP legado.
  */
 function isCellSolid(col, row) {
   if (col < 0 || row < 0 || col >= COLS || row >= ROWS) return false;
@@ -65,191 +108,242 @@ function isCellSolid(col, row) {
     const cell = layout.cells[row]?.[col];
     return cell ? cell.solid : false;
   }
-  // Fallback: MAP legado (tipos sólidos: W=1, M=2, P=7, S=8)
   const t = MAP[row]?.[col] ?? 0;
   return t === 1 || t === 2 || t === 7 || t === 8;
 }
 
 /**
- * Retorna o sprite e metadados de uma célula (col, row).
- * Usa o modelo de layout quando disponível; fallback para MAP legado.
+ * Retorna os dados da célula (col, row).
  */
-function getCellSprite(col, row) {
+function getCellData(col, row) {
   const layout = getLayout();
   if (layout) {
     const cell = layout.cells[row]?.[col];
     if (!cell) return { floor: 'floor', object: null, solid: false };
     return { floor: cell.floor || 'floor', object: cell.object || null, solid: cell.solid };
   }
-  // Fallback: MAP legado
-  const t = MAP[row]?.[col] ?? 0;
-  return tileSpriteLegacy(t);
+  return tileDataLegacy(MAP[row]?.[col] ?? 0);
 }
 
-/**
- * Conversão legado MAP → sprites (usado apenas quando layout.json não está carregado).
- * @param {number} tileType
- */
-function tileSpriteLegacy(tileType) {
-  const W = 1, M = 2, C = 3, K = 4, R = 5, E = 6, P = 7, S = 8;
-  switch (tileType) {
-    case 0: return { floor: 'floor',        object: null,        solid: false };
-    case K: return { floor: 'floor-detail', object: null,        solid: false };
-    case R: return { floor: 'floor-panel',  object: null,        solid: false };
-    case E: return { floor: 'floor-corner', object: null,        solid: false };
-    case W: return { floor: 'floor',        object: 'wall',      solid: true  };
-    case M: return { floor: 'floor',        object: 'table',     solid: true  };
-    case C: return { floor: 'floor',        object: 'chair',     solid: false };
-    case P: return { floor: 'floor',        object: 'structure', solid: true  };
-    case S: return { floor: 'floor',        object: 'container', solid: true  };
-    default: return { floor: 'floor',       object: null,        solid: false };
+function tileDataLegacy(t) {
+  const W=1,M=2,C=3,K=4,R=5,E=6,P=7,S=8;
+  switch (t) {
+    case 0: return { floor:'floor',        object:null,        solid:false };
+    case K: return { floor:'floor-detail', object:null,        solid:false };
+    case R: return { floor:'floor-panel',  object:null,        solid:false };
+    case E: return { floor:'floor-corner', object:null,        solid:false };
+    case W: return { floor:'floor',        object:'wall',      solid:true  };
+    case M: return { floor:'floor',        object:'table',     solid:true  };
+    case C: return { floor:'floor',        object:'chair',     solid:false };
+    case P: return { floor:'floor',        object:'structure', solid:true  };
+    case S: return { floor:'floor',        object:'container', solid:true  };
+    default:return { floor:'floor',        object:null,        solid:false };
   }
 }
 
-// ─── Auto-orientação de paredes ───────────────────────────────────────────────
+// ─── Cálculo dos 4 cantos do losango de uma célula ────────────────────────────
 
 /**
- * Determina o sprite e transformação de uma célula de parede de acordo com
- * a vizinhança de células sólidas.
- *
- * Vizinhos considerados (4-conectividade):
- *   N = (col, row-1)  S = (col, row+1)
- *   W = (col-1, row)  E = (col+1, row)
- *
- * Lógica de orientação (perspectiva isométrica, câmera NE):
- *   - Ambos E e S sólidos → canto SE  (wall-corner, flip nenhum)
- *   - E sólido, W sólido  → parede eixo X (wall, normal)
- *   - N sólido, S sólido  → parede eixo Y (wall, flip horizontal)
- *   - Só E sólido         → wall, normal
- *   - Só S sólido         → wall, flip horizontal
- *   - Canto com N e W     → wall-corner, flipX+flipY
- *   - etc.
- *
- * Retorna: { spriteName, flipX, flipY }
- *
- * @param {number} col
- * @param {number} row
- * @returns {{ spriteName: string, flipX: boolean, flipY: boolean }}
+ * Retorna os 4 vértices de tela do losango da célula (col, row).
+ * N = topo, E = direita, S = baixo, W = esquerda.
+ * Tesselam perfeitamente com vizinhos.
+ * OBS: tileScreen(col,row) retorna (sx,sy) = N (topo do losango), o que garante
+ * compatibilidade total com o highlight do editor (_desenharDestaque).
  */
-function wallOrientation(col, row) {
-  const N = isCellSolid(col,     row - 1);
-  const S = isCellSolid(col,     row + 1);
-  const Wn = isCellSolid(col - 1, row);
-  const E = isCellSolid(col + 1, row);
-
-  const hWall = Wn || E;   // vizinhos no eixo horizontal
-  const vWall = N  || S;   // vizinhos no eixo vertical
-  const corner = hWall && vWall;
-
-  if (corner) {
-    // Canto: escolhe o sprite de canto e o flip pelo quadrante
-    // Em isométrico 2:1 a câmera fica acima-direita:
-    //   canto SE (E+S) → normal
-    //   canto SW (W+S) → flipX
-    //   canto NE (E+N) → flipY
-    //   canto NW (W+N) → flipX+flipY
-    const flipX = Wn && !E;
-    const flipY = N  && !S;
-    return { spriteName: 'wall-corner', flipX, flipY };
-  }
-
-  if (hWall) {
-    // Parede horizontal (eixo X de mundo → eixo "esquerda-direita" em tela)
-    return { spriteName: 'wall', flipX: false, flipY: false };
-  }
-
-  if (vWall) {
-    // Parede vertical (eixo Y de mundo → eixo "frente-trás" em tela)
-    // Espelhamos horizontalmente para dar a face correta
-    return { spriteName: 'wall', flipX: true, flipY: false };
-  }
-
-  // Célula sólida isolada (pillar decorativo)
-  return { spriteName: 'wall-pillar', flipX: false, flipY: false };
+function cellCorners(col, row) {
+  const WT = WORLD_TILE;
+  const N = worldToScreen(col * WT,       row * WT);
+  const E = worldToScreen((col + 1) * WT, row * WT);
+  const S = worldToScreen((col + 1) * WT, (row + 1) * WT);
+  const W = worldToScreen(col * WT,       (row + 1) * WT);
+  return { N, E, S, W };
 }
 
-// ─── Helpers de desenho ───────────────────────────────────────────────────────
-
 /**
- * Calcula o ponto de tela (topo-centro do losango) para o tile (col, row).
- * @param {number} col
- * @param {number} row
- * @returns {{sx: number, sy: number}}
+ * Retorna os vértices do topo do prisma (elevados por dH px).
  */
-function tileScreen(col, row) {
+function topCorners(corners, dH) {
   return {
-    sx: ORIGIN_X + (col - row) * (TW / 2),
-    sy: ORIGIN_Y + (col + row) * (TH / 2),
+    N: { sx: corners.N.sx, sy: corners.N.sy - dH },
+    E: { sx: corners.E.sx, sy: corners.E.sy - dH },
+    S: { sx: corners.S.sx, sy: corners.S.sy - dH },
+    W: { sx: corners.W.sx, sy: corners.W.sy - dH },
   };
 }
 
-/**
- * Desenha um sprite de PISO isométrico centrado no ponto de tela (sx, sy).
- * O piso Kenney é 64×64; o topo do losango coincide com sy.
- * A ponta inferior do losango fica em sy + TH.
- *
- * @param {CanvasRenderingContext2D} ctx
- * @param {string} spriteName
- * @param {number} sx  — centro-X de tela do tile
- * @param {number} sy  — topo do losango em tela
- * @param {number} [scale=1]
- */
-// Y (dentro do PNG 64×64 da Kenney) onde começa a área OPACA do piso (medido: 13).
-// Usado para ancorar o TOPO do losango do piso na ponta superior da célula.
-const FLOOR_OPAQUE_TOP = 13;
+// ─── Helpers de path ─────────────────────────────────────────────────────────
 
-function drawFloorSprite(ctx, spriteName, sx, sy, scale = 1) {
-  const image = img(spriteName);
-  if (!image.complete || image.naturalWidth === 0) return;
-  // Escala de preenchimento fecha os vãos entre tiles (piso é preview 3D com padding).
-  const s = scale * FLOOR_FILL_SCALE;
-  const w = image.naturalWidth  * s;
-  const h = image.naturalHeight * s;
-  // Ancora o TOPO do losango do piso na ponta superior da célula (sx, sy):
-  //  - horizontal: opaco é centrado no sprite → centra em sx (sx - w/2).
-  //  - vertical: pixel FLOOR_OPAQUE_TOP do sprite cai em sy (+ ajuste fino).
-  // Mesma referência do highlight do editor e do pé dos objetos → tudo alinhado.
-  ctx.drawImage(image, sx - w / 2, sy - FLOOR_OPAQUE_TOP * s + FLOOR_TOP_ADJUST, w, h);
+/** Preenche um losango (N,E,S,W) */
+function fillDiamond(ctx, N, E, S, W, color) {
+  ctx.beginPath();
+  ctx.moveTo(N.sx, N.sy);
+  ctx.lineTo(E.sx, E.sy);
+  ctx.lineTo(S.sx, S.sy);
+  ctx.lineTo(W.sx, W.sy);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+/** Preenche um quad com 4 pontos {sx,sy} */
+function fillQuad(ctx, a, b, c, d, color) {
+  ctx.beginPath();
+  ctx.moveTo(a.sx, a.sy);
+  ctx.lineTo(b.sx, b.sy);
+  ctx.lineTo(c.sx, c.sy);
+  ctx.lineTo(d.sx, d.sy);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+
+// ─── Desenho de piso ──────────────────────────────────────────────────────────
+
+/**
+ * Cor do piso com base no tipo de tile e na zona.
+ * A zona tinge levemente o piso com sua cor de overlay.
+ */
+function floorColor(floorType, zoneColor) {
+  let base;
+  switch (floorType) {
+    case 'floor-detail': base = FLOOR_DETAIL; break;
+    case 'floor-panel':  base = FLOOR_DETAIL; break;
+    case 'floor-corner': base = FLOOR_CORNER; break;
+    case 'balcony-floor':base = FLOOR_CORNER; break;
+    default:             base = FLOOR_BASE;   break;
+  }
+  return base; // zona é aplicada como overlay separado nos tiles de zona
 }
 
 /**
- * Desenha um sprite de OBJETO isométrico ancorado pelo PÉ na célula.
- *
- * WYSIWYG: a base do sprite (bottom) assenta no centro-baixo do losango do piso,
- * ou seja, em sy + TH/2 + WALL_FOOT_OFFSET.
- * Isso garante que o "pé" visual coincide com a célula de colisão.
- *
- * Para objetos de altura variável (cadeiras, mesas) usamos a mesma âncora de pé.
- *
- * @param {CanvasRenderingContext2D} ctx
- * @param {string} spriteName
- * @param {number} sx       — centro-X do tile em tela
- * @param {number} sy       — topo do losango em tela
- * @param {number} [scale=1]
- * @param {boolean} [flipX=false] — espelha horizontalmente
- * @param {boolean} [flipY=false] — espelha verticalmente
+ * Desenha o piso de uma célula (losango preenchido + linha de grade sutil).
  */
-function drawObjectSprite(ctx, spriteName, sx, sy, scale = 1, flipX = false, flipY = false) {
-  const image = img(spriteName);
-  if (!image.complete || image.naturalWidth === 0) return;
-  const w = image.naturalWidth  * scale;
-  const h = image.naturalHeight * scale;
+function drawFloorCell(ctx, col, row, floorType, zoneColor) {
+  const { N, E, S, W } = cellCorners(col, row);
+  fillDiamond(ctx, N, E, S, W, floorColor(floorType, zoneColor));
 
-  // Pé do sprite = centro-baixo do losango = sy + TH/2 + WALL_FOOT_OFFSET
-  const footY = sy + TH / 2 + WALL_FOOT_OFFSET;
-  const destY = footY - h;  // topo do destino = pé - altura do sprite
-  const destX = sx - w / 2; // centralizado horizontalmente
+  // Linha de grade sutil nas 4 bordas
+  ctx.beginPath();
+  ctx.moveTo(N.sx, N.sy);
+  ctx.lineTo(E.sx, E.sy);
+  ctx.lineTo(S.sx, S.sy);
+  ctx.lineTo(W.sx, W.sy);
+  ctx.closePath();
+  ctx.strokeStyle = FLOOR_GRID;
+  ctx.lineWidth = 0.7;
+  ctx.stroke();
+}
 
-  if (!flipX && !flipY) {
-    ctx.drawImage(image, destX, destY, w, h);
-    return;
+// ─── Desenho de prismas (paredes, móveis) ────────────────────────────────────
+
+/**
+ * Desenha um prisma extrudado sobre a célula (col, row) com altura dH.
+ * Faces visíveis (câmera vinda de NW/NE):
+ *   - Face SW: [W, S, S_top, W_top]
+ *   - Face SE: [S, E, E_top, S_top]
+ *   - Topo:    losango N_top,E_top,S_top,W_top
+ */
+function drawPrism(ctx, col, row, dH, colorTop, colorSW, colorSE) {
+  const base = cellCorners(col, row);
+  const top  = topCorners(base, dH);
+
+  // Face SW (lado esquerdo-frontal)
+  fillQuad(ctx, base.W, base.S, top.S, top.W, colorSW);
+  // Face SE (lado direito-frontal)
+  fillQuad(ctx, base.S, base.E, top.E, top.S, colorSE);
+  // Topo do prisma
+  fillDiamond(ctx, top.N, top.E, top.S, top.W, colorTop);
+}
+
+// ─── Render de objetos por tipo ───────────────────────────────────────────────
+
+/**
+ * Desenha um objeto na célula (col, row) de acordo com seu tipo.
+ * Cada tipo é um prisma ou forma simples coerente com o estilo.
+ */
+function drawObject(ctx, col, row, objectType) {
+  switch (objectType) {
+    case 'wall':
+      drawPrism(ctx, col, row, WALL_H, WALL_TOP, WALL_SIDE_SW, WALL_SIDE_SE);
+      break;
+
+    case 'wall-door':
+      // Porta: sill baixo + vão — mostra um prisma bem baixo para indicar passagem
+      drawPrism(ctx, col, row, DOOR_H, DOOR_TOP, DOOR_SIDE, DOOR_SIDE);
+      break;
+
+    case 'wall-window':
+      // Janela: parede cheia de altura normal, tom azulado
+      drawPrism(ctx, col, row, WINDOW_H, WINDOW_TOP, WINDOW_SIDE, WINDOW_SIDE);
+      break;
+
+    case 'table':
+      drawPrism(ctx, col, row, TABLE_H, TABLE_TOP, TABLE_SIDE_SW, TABLE_SIDE_SE);
+      break;
+
+    case 'chair': {
+      // Cadeira: prisma menor, deslocado levemente para o centro
+      // Desenhamos na mesma célula mas com altura reduzida
+      drawPrism(ctx, col, row, CHAIR_H, CHAIR_TOP, CHAIR_SIDE, CHAIR_SIDE);
+      break;
+    }
+
+    case 'computer':
+      // Computador: prisma alto e estreito — desenha um sub-losango centrado
+      _drawSubPrism(ctx, col, row, COMPUTER_H, 0.5, COMPUTER_TOP, COMPUTER_SIDE, COMPUTER_SIDE);
+      break;
+
+    case 'container':
+      drawPrism(ctx, col, row, CONTAINER_H, CONTAINER_TOP, CONTAINER_SIDE_SW, CONTAINER_SIDE_SE);
+      break;
+
+    case 'structure':
+      // Planta: sub-prisma ligeiramente mais estreito, mais alto, verde
+      _drawSubPrism(ctx, col, row, STRUCTURE_H, 0.55, STRUCTURE_TOP, STRUCTURE_SIDE, STRUCTURE_SIDE);
+      break;
+
+    case 'bed-single':
+      // Cama: prisma baixo, tom claro
+      drawPrism(ctx, col, row, 8, '#3a3550', '#252038', '#2e2844');
+      break;
+
+    default:
+      // Objeto desconhecido: prisma genérico pequeno
+      drawPrism(ctx, col, row, 8, '#303550', '#1e2238', '#282e48');
+      break;
+  }
+}
+
+/**
+ * Desenha um sub-prisma centralizado na célula — para objetos menores que
+ * ocupam só parte da área da célula (computador, planta, etc.).
+ * @param {number} frac — fração do losango usada (0..1), ex: 0.5 = metade
+ */
+function _drawSubPrism(ctx, col, row, dH, frac, colorTop, colorSW, colorSE) {
+  const { N, E, S, W } = cellCorners(col, row);
+  // Centro do losango
+  const cx = (N.sx + E.sx + S.sx + W.sx) / 4;
+  const cy = (N.sy + E.sy + S.sy + W.sy) / 4;
+
+  // Sub-losango: lerp entre centro e cada canto por frac
+  function lerp(a, f) {
+    return { sx: cx + (a.sx - cx) * f, sy: cy + (a.sy - cy) * f };
   }
 
-  ctx.save();
-  ctx.translate(sx, footY - h / 2); // pivot no centro do sprite
-  ctx.scale(flipX ? -1 : 1, flipY ? -1 : 1);
-  ctx.drawImage(image, -w / 2, -h / 2, w, h);
-  ctx.restore();
+  const sN = lerp(N, frac);
+  const sE = lerp(E, frac);
+  const sS = lerp(S, frac);
+  const sW = lerp(W, frac);
+
+  // Faces SW e SE do sub-prisma
+  const tN = { sx: sN.sx, sy: sN.sy - dH };
+  const tE = { sx: sE.sx, sy: sE.sy - dH };
+  const tS = { sx: sS.sx, sy: sS.sy - dH };
+  const tW = { sx: sW.sx, sy: sW.sy - dH };
+
+  fillQuad(ctx, sW, sS, tS, tW, colorSW);
+  fillQuad(ctx, sS, sE, tE, tS, colorSE);
+  fillDiamond(ctx, tN, tE, tS, tW, colorTop);
 }
 
 // ─── Render principal ─────────────────────────────────────────────────────────
@@ -257,9 +351,10 @@ function drawObjectSprite(ctx, spriteName, sx, sy, scale = 1, flipX = false, fli
 /**
  * Renderiza o escritório em projeção isométrica no contexto 2D.
  *
- * Estratégia de duas passadas:
+ * Estratégia de passadas:
  *   1. Piso  — varredura row-major (de cima p/ baixo, esquerda p/ direita).
- *   2. Objetos (paredes, móveis) — painter's algorithm por (col + row) crescente.
+ *   2. Zonas coloridas (overlay translúcido sobre o piso).
+ *   3. Objetos (paredes, móveis) — painter's algorithm por depthKey crescente.
  *
  * @param {CanvasRenderingContext2D} ctx
  */
@@ -267,40 +362,27 @@ export function renderOfficeIso(ctx) {
   // ── Passada 1: piso ─────────────────────────────────────────────────────────
   for (let row = 0; row < ROWS; row++) {
     for (let col = 0; col < COLS; col++) {
-      const { floor } = getCellSprite(col, row);
+      const { floor } = getCellData(col, row);
       if (!floor) continue;
-      const { sx, sy } = tileScreen(col, row);
-      drawFloorSprite(ctx, floor, sx, sy);
+      drawFloorCell(ctx, col, row, floor, null);
     }
   }
 
-  // ── Passada 2: objetos ordenados por profundidade ───────────────────────────
-  /** @type {Array<{depth:number, col:number, row:number, sprite:string, flipX:boolean, flipY:boolean, scaleObj:number}>} */
+  // ── Passada 2: zonas coloridas ──────────────────────────────────────────────
+  _renderZones(ctx);
+
+  // ── Passada 3: objetos ordenados por profundidade ───────────────────────────
+  /** @type {Array<{depth:number, col:number, row:number, object:string}>} */
   const objects = [];
 
   for (let row = 0; row < ROWS; row++) {
     for (let col = 0; col < COLS; col++) {
-      const { object } = getCellSprite(col, row);
+      const { object } = getCellData(col, row);
       if (!object) continue;
-
-      let spriteName = object;
-      let flipX = false;
-      let flipY = false;
-
-      // Paredes: auto-orientação por vizinhança
-      if (object === 'wall') {
-        const ori = wallOrientation(col, row);
-        spriteName = ori.spriteName;
-        flipX      = ori.flipX;
-        flipY      = ori.flipY;
-      }
-
       objects.push({
         depth: depthKey(col, row),
         col, row,
-        sprite: spriteName,
-        flipX, flipY,
-        scaleObj: 1,
+        object,
       });
     }
   }
@@ -308,13 +390,9 @@ export function renderOfficeIso(ctx) {
   // Ordena por profundidade crescente (fundo primeiro), desempate por row
   objects.sort((a, b) => a.depth - b.depth || a.row - b.row);
 
-  for (const { col, row, sprite, flipX, flipY, scaleObj } of objects) {
-    const { sx, sy } = tileScreen(col, row);
-    drawObjectSprite(ctx, sprite, sx, sy, scaleObj, flipX, flipY);
+  for (const { col, row, object } of objects) {
+    drawObject(ctx, col, row, object);
   }
-
-  // ── Passada 3: zonas coloridas + labels ─────────────────────────────────────
-  _renderZones(ctx);
 }
 
 /**
@@ -332,22 +410,17 @@ function _renderZones(ctx) {
     const x1 = (z.x + z.w) / TILE;
     const y1 = (z.y + z.h) / TILE;
 
-    // 4 vértices em tela
-    const tl = tileScreen(x0, y0); // top-left
-    const tr = tileScreen(x1, y0); // top-right
-    const br = tileScreen(x1, y1); // bottom-right
-    const bl = tileScreen(x0, y1); // bottom-left
-
-    // Ajuste: os pontos ficam no topo do losango; queremos o centro
-    const half = TH / 2;
-    const adjust = (p) => ({ x: p.sx, y: p.sy + half });
-    const [vtl, vtr, vbr, vbl] = [tl, tr, br, bl].map(adjust);
+    // 4 vértices em tela (usando worldToScreen para consistência)
+    const tl = worldToScreen(z.x,         z.y);
+    const tr = worldToScreen(z.x + z.w,   z.y);
+    const br = worldToScreen(z.x + z.w,   z.y + z.h);
+    const bl = worldToScreen(z.x,         z.y + z.h);
 
     ctx.beginPath();
-    ctx.moveTo(vtl.x, vtl.y);
-    ctx.lineTo(vtr.x, vtr.y);
-    ctx.lineTo(vbr.x, vbr.y);
-    ctx.lineTo(vbl.x, vbl.y);
+    ctx.moveTo(tl.sx, tl.sy);
+    ctx.lineTo(tr.sx, tr.sy);
+    ctx.lineTo(br.sx, br.sy);
+    ctx.lineTo(bl.sx, bl.sy);
     ctx.closePath();
 
     ctx.fillStyle = z.color;
@@ -361,8 +434,8 @@ function _renderZones(ctx) {
     ctx.setLineDash([]);
 
     // Label no centro isométrico da zona
-    const cx = (vtl.x + vtr.x + vbr.x + vbl.x) / 4;
-    const cy = (vtl.y + vtr.y + vbr.y + vbl.y) / 4;
+    const cx = (tl.sx + tr.sx + br.sx + bl.sx) / 4;
+    const cy = (tl.sy + tr.sy + br.sy + bl.sy) / 4;
     ctx.fillStyle = 'rgba(255,255,255,0.22)';
     ctx.font = 'bold 9px "Segoe UI", system-ui, sans-serif';
     ctx.textAlign = 'center';
@@ -380,8 +453,9 @@ function _renderZones(ctx) {
  *   - Realce das células sólidas (vermelho translúcido)
  *   - Limites e rótulos das zonas (amarelo)
  *
- * Ativado por main.js via toggle (tecla Tab ou botão).
- * Também é a base do editor visual do Estágio 2.
+ * Usa os 4 cantos exatos (cellCorners) — mesma geometria do piso procedural.
+ * O highlight do editor (_desenharDestaque) usa tileScreen(col,row) = ponto N,
+ * que é worldToScreen(col*WT, row*WT) = N de cellCorners → coincidência exata.
  *
  * @param {CanvasRenderingContext2D} ctx
  */
@@ -390,24 +464,16 @@ export function renderDebugOverlay(ctx) {
 
   for (let row = 0; row < ROWS; row++) {
     for (let col = 0; col < COLS; col++) {
-      const { sx, sy } = tileScreen(col, row);
-
-      // Losango da grade
-      //   topo    = (sx, sy)
-      //   direita = (sx + TW/2, sy + TH/2)
-      //   baixo   = (sx,        sy + TH)
-      //   esquerda= (sx - TW/2, sy + TH/2)
-      const lx = sx - TW / 2, cx = sx, rx = sx + TW / 2;
-      const ty = sy, my = sy + TH / 2, by = sy + TH;
+      const { N, E, S, W } = cellCorners(col, row);
+      const { solid } = getCellData(col, row);
 
       // Realce das células sólidas
-      const { solid } = getCellSprite(col, row);
       if (solid) {
         ctx.beginPath();
-        ctx.moveTo(cx, ty);
-        ctx.lineTo(rx, my);
-        ctx.lineTo(cx, by);
-        ctx.lineTo(lx, my);
+        ctx.moveTo(N.sx, N.sy);
+        ctx.lineTo(E.sx, E.sy);
+        ctx.lineTo(S.sx, S.sy);
+        ctx.lineTo(W.sx, W.sy);
         ctx.closePath();
         ctx.fillStyle = 'rgba(255, 60, 60, 0.22)';
         ctx.fill();
@@ -415,10 +481,10 @@ export function renderDebugOverlay(ctx) {
 
       // Borda do losango
       ctx.beginPath();
-      ctx.moveTo(cx, ty);
-      ctx.lineTo(rx, my);
-      ctx.lineTo(cx, by);
-      ctx.lineTo(lx, my);
+      ctx.moveTo(N.sx, N.sy);
+      ctx.lineTo(E.sx, E.sy);
+      ctx.lineTo(S.sx, S.sy);
+      ctx.lineTo(W.sx, W.sy);
       ctx.closePath();
       ctx.strokeStyle = solid
         ? 'rgba(255,100,100,0.5)'
@@ -431,20 +497,16 @@ export function renderDebugOverlay(ctx) {
   // Limites das zonas (amarelo)
   const zones = getLayout() ? getLayout().zones : ZONES;
   for (const [key, z] of Object.entries(zones)) {
-    const x0 = z.x / TILE, y0 = z.y / TILE;
-    const x1 = (z.x + z.w) / TILE, y1 = (z.y + z.h) / TILE;
-
-    const tl = tileScreen(x0, y0);
-    const tr = tileScreen(x1, y0);
-    const br = tileScreen(x1, y1);
-    const bl = tileScreen(x0, y1);
-
-    const half = TH / 2;
-    const pts = [tl, tr, br, bl].map(p => ({ x: p.sx, y: p.sy + half }));
+    const tl = worldToScreen(z.x,         z.y);
+    const tr = worldToScreen(z.x + z.w,   z.y);
+    const br = worldToScreen(z.x + z.w,   z.y + z.h);
+    const bl = worldToScreen(z.x,         z.y + z.h);
 
     ctx.beginPath();
-    ctx.moveTo(pts[0].x, pts[0].y);
-    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.moveTo(tl.sx, tl.sy);
+    ctx.lineTo(tr.sx, tr.sy);
+    ctx.lineTo(br.sx, br.sy);
+    ctx.lineTo(bl.sx, bl.sy);
     ctx.closePath();
     ctx.strokeStyle = 'rgba(255, 220, 50, 0.7)';
     ctx.lineWidth = 1.5;
@@ -453,8 +515,8 @@ export function renderDebugOverlay(ctx) {
     ctx.setLineDash([]);
 
     // Rótulo da sala
-    const cx2 = pts.reduce((s, p) => s + p.x, 0) / 4;
-    const cy2 = pts.reduce((s, p) => s + p.y, 0) / 4;
+    const cx2 = (tl.sx + tr.sx + br.sx + bl.sx) / 4;
+    const cy2 = (tl.sy + tr.sy + br.sy + bl.sy) / 4;
     ctx.fillStyle = 'rgba(255,220,50,0.85)';
     ctx.font = 'bold 10px "Segoe UI", monospace';
     ctx.textAlign = 'center';
@@ -468,21 +530,26 @@ export function renderDebugOverlay(ctx) {
 /**
  * Retorna a lista de objetos (tiles com object) para intercalar com avatares
  * no painter's algorithm do main.js.
- * Cada item: { depth, sx, sy, sprite, scaleObj }
+ * Cada item: { depth, sx, sy, object }
+ * (campo 'sprite' mantido como alias de 'object' para compatibilidade com
+ *  qualquer código que leia getSceneObjects().sprite)
  *
- * @returns {Array<{depth:number, sx:number, sy:number, sprite:string, scaleObj:number}>}
+ * @returns {Array<{depth:number, sx:number, sy:number, sprite:string, object:string, scaleObj:number}>}
  */
 export function getSceneObjects() {
   const objects = [];
   for (let row = 0; row < ROWS; row++) {
     for (let col = 0; col < COLS; col++) {
-      const { object } = getCellSprite(col, row);
+      const { object } = getCellData(col, row);
       if (!object) continue;
-      const { sx, sy } = tileScreen(col, row);
+      // sx/sy = ponto N (topo do losango) — mesma referência de tileScreen
+      const { sx: sx0, sy: sy0 } = worldToScreen(col * WORLD_TILE, row * WORLD_TILE);
       objects.push({
         depth: depthKey(col, row),
-        sx, sy,
-        sprite: object,
+        sx: sx0,
+        sy: sy0,
+        sprite: object,   // alias para compatibilidade
+        object,
         scaleObj: 1,
       });
     }

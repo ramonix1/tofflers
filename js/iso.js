@@ -106,6 +106,13 @@ export const WALL_FOOT_OFFSET = 0;
 // Mantida para não quebrar imports externos que a leiam.
 export const TILE_Z_WALL = 0;  // zero: pé ancorado na célula (WYSIWYG)
 
+/**
+ * WALL_H — altura de extrusão do prisma de parede em px de tela.
+ * Afine aqui para mudar a altura visual das paredes.
+ * 22px resulta numa parede com boa leitura na proporção 2:1 do losango.
+ */
+export const WALL_H = 22;
+
 // ── Velocidades de movimento (px/s) — afine aqui ─────────────────────────────
 export const SPEED     = 120; // caminhada normal
 export const SPEED_RUN = 210; // corrida (Shift ou CapsLock)
