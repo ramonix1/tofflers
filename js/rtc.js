@@ -18,8 +18,14 @@ const RTC_CONFIG = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    // TURN: necessário só para peers atrás de NAT simétrico (alguns convidados
-    // remotos). Adicione aqui { urls, username, credential } se precisar.
+    // TURN (relay) — ESSENCIAL para pessoas em redes diferentes (NAT). Sem isto,
+    // o P2P direto falha entre a maioria dos usuários remotos (só STUN não basta).
+    // Usando o TURN público gratuito Open Relay (Metered) — bom para começar/testar.
+    // Para produção confiável, troque por um TURN dedicado (Metered com API key,
+    // Twilio, ou coturn num VPS). As portas 443/tcp ajudam a furar firewalls.
+    { urls: 'turn:openrelay.metered.ca:80',                 username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443',                username: 'openrelayproject', credential: 'openrelayproject' },
+    { urls: 'turn:openrelay.metered.ca:443?transport=tcp',  username: 'openrelayproject', credential: 'openrelayproject' },
   ],
 };
 
