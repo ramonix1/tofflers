@@ -18,14 +18,10 @@ const RTC_CONFIG = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
-    // TURN (relay) — ESSENCIAL para pessoas em redes diferentes (NAT). Sem isto,
-    // o P2P direto falha entre a maioria dos usuários remotos (só STUN não basta).
-    // Usando o TURN público gratuito Open Relay (Metered) — bom para começar/testar.
-    // Para produção confiável, troque por um TURN dedicado (Metered com API key,
-    // Twilio, ou coturn num VPS). As portas 443/tcp ajudam a furar firewalls.
-    { urls: 'turn:openrelay.metered.ca:80',                 username: 'openrelayproject', credential: 'openrelayproject' },
-    { urls: 'turn:openrelay.metered.ca:443',                username: 'openrelayproject', credential: 'openrelayproject' },
-    { urls: 'turn:openrelay.metered.ca:443?transport=tcp',  username: 'openrelayproject', credential: 'openrelayproject' },
+    // TURN removido: até ontem a mídia funcionava só com STUN (inclusive
+    // cross-network). O TURN público gratuito (Open Relay) coincidiu com a
+    // quebra de HOJE — revertido para o estado que funcionava. Quando houver um
+    // TURN VÁLIDO (Metered com API key / coturn num VPS), reintroduzir testando.
   ],
 };
 
@@ -108,7 +104,15 @@ export class RtcManager {
     let peer = this.peers.get(id);
     if (peer) return peer;
 
-    const pc = new RTCPeerConnection(RTC_CONFIG);
+    let pc;
+    try {
+      pc = new RTCPeerConnection(RTC_CONFIG);
+    } catch (err) {
+      // Config de iceServers inválida faz o construtor lançar → mataria TODA a
+      // mídia silenciosamente. Logamos e desistimos deste peer (sem derrubar o app).
+      console.error('[rtc] FALHA ao criar RTCPeerConnection:', err);
+      return null;
+    }
     // Perfect negotiation: papel determinístico por comparação de IDs.
     const polite = String(this.selfId) > String(id);
 
