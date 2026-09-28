@@ -77,7 +77,7 @@ export class Chat {
     });
 
     // Mensagem de boas-vindas
-    this._postSystem('geral', '👋 Bem-vindo ao Enterprise! Use WASD para mover-se pelo escritório.');
+    this._postSystem('geral', '👋 Bem-vindo ao Toffies! Use WASD para mover-se pelo escritório.');
   }
 
   /**

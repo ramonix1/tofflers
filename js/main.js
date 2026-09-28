@@ -1013,7 +1013,7 @@ function sanitize(s) {
 }
 
 const VALID_ROLES = ['Gestor', 'Líder', 'Dev', 'Testador', 'Analista'];
-const VALID_SKINS = ['golden', 'chocolate', 'grey', 'black', 'cream'];
+const VALID_SKINS = ['golden', 'caramelo', 'chocolate', 'grey', 'black', 'cream'];
 
 /** Lê a skin salva no localStorage (fallback: 'golden'). */
 function getSavedSkin() {
@@ -1103,6 +1103,7 @@ function initSkinSelector() {
 
   const skins = [
     { id: 'golden',    label: 'Golden' },
+    { id: 'caramelo',  label: 'Caramelo' },
     { id: 'chocolate', label: 'Chocolate' },
     { id: 'grey',      label: 'Cinza' },
     { id: 'black',     label: 'Escuro' },

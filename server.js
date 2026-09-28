@@ -219,7 +219,7 @@ function pickSpawn() {
 // ─── Handlers de mensagens WS ─────────────────────────────────────────────────
 function handleJoin(ws, msg) {
   const id = generateId();
-  const VALID_SKINS = ['golden', 'chocolate', 'grey', 'black', 'cream'];
+  const VALID_SKINS = ['golden', 'caramelo', 'chocolate', 'grey', 'black', 'cream'];
   const skin = VALID_SKINS.includes(msg.skin) ? msg.skin : 'golden';
   const player = {
     id,
