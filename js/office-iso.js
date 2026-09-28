@@ -39,61 +39,61 @@ import {
 
 // ─── Paleta de cores (constantes — ajuste fino aqui) ─────────────────────────
 
-/** Piso padrão: cinza-azulado escuro, combinando com o tema dark */
-const FLOOR_BASE       = '#1e2235';
+/** Piso padrão: azul-acinzentado CLARO (bem mais claro que o tema, boa leitura) */
+const FLOOR_BASE       = '#5a6291';
 /** Piso com detalhe (ex.: floor-detail, floor-panel) */
-const FLOOR_DETAIL     = '#252a40';
+const FLOOR_DETAIL     = '#69719e';
 /** Piso de varanda / canto */
-const FLOOR_CORNER     = '#1c2030';
+const FLOOR_CORNER     = '#525a86';
 /** Linha de grade do piso (sutil) */
-const FLOOR_GRID       = 'rgba(255,255,255,0.06)';
+const FLOOR_GRID       = 'rgba(255,255,255,0.10)';
 
-/** Topo do prisma de parede (face mais clara — "céu") */
-const WALL_TOP         = '#3a4060';
+/** Topo do prisma de parede (face mais clara) */
+const WALL_TOP         = '#aab0d6';
 /** Face frontal SW da parede (sombra mais escura) */
-const WALL_SIDE_SW     = '#222640';
+const WALL_SIDE_SW     = '#6b719c';
 /** Face frontal SE da parede (sombra intermediária) */
-const WALL_SIDE_SE     = '#2a3050';
+const WALL_SIDE_SE     = '#8288b5';
 
 /** Topo do prisma de porta — mais baixo, tom diferente */
-const DOOR_TOP         = '#2e3555';
+const DOOR_TOP         = '#8f96bd';
 /** Lateral da porta */
-const DOOR_SIDE        = '#1a1f35';
+const DOOR_SIDE        = '#646a90';
 /** Altura do sill da porta (px de tela) — menor que WALL_H */
 const DOOR_H           = 8;
 
 /** Mesa: superfície e lateral */
-const TABLE_TOP        = '#5a3e28';
-const TABLE_SIDE_SW    = '#3a2718';
-const TABLE_SIDE_SE    = '#4a3220';
+const TABLE_TOP        = '#a9764a';
+const TABLE_SIDE_SW    = '#6f4c2d';
+const TABLE_SIDE_SE    = '#8a5f3a';
 /** Altura da mesa (px de tela) */
 const TABLE_H          = 10;
 
 /** Cadeira: assento e lateral */
-const CHAIR_TOP        = '#2e4a6e';
-const CHAIR_SIDE       = '#1e3050';
+const CHAIR_TOP        = '#4f7ab5';
+const CHAIR_SIDE       = '#38567f';
 /** Altura da cadeira */
 const CHAIR_H          = 7;
 
 /** Computador */
-const COMPUTER_TOP     = '#1a2a3a';
-const COMPUTER_SIDE    = '#111a25';
+const COMPUTER_TOP     = '#3f5f7e';
+const COMPUTER_SIDE    = '#2a3f54';
 const COMPUTER_H       = 14;
 
 /** Container/balcão */
-const CONTAINER_TOP    = '#3a3a4a';
-const CONTAINER_SIDE_SW = '#222230';
-const CONTAINER_SIDE_SE = '#2e2e40';
+const CONTAINER_TOP    = '#7a7a95';
+const CONTAINER_SIDE_SW = '#4e4e64';
+const CONTAINER_SIDE_SE = '#616178';
 const CONTAINER_H      = 14;
 
 /** Estrutura / planta decorativa */
-const STRUCTURE_TOP    = '#2e5c2e';
-const STRUCTURE_SIDE   = '#1e3c1e';
+const STRUCTURE_TOP    = '#4fa64f';
+const STRUCTURE_SIDE   = '#357935';
 const STRUCTURE_H      = 18;
 
 /** Janela: tom levemente azulado translúcido no topo */
-const WINDOW_TOP       = '#3a5080';
-const WINDOW_SIDE      = '#28406a';
+const WINDOW_TOP       = '#7d97c8';
+const WINDOW_SIDE      = '#5a78ad';
 const WINDOW_H         = WALL_H;
 
 // ─── Helpers de acesso ao modelo de layout ────────────────────────────────────

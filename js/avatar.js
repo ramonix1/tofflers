@@ -236,12 +236,15 @@ export class Avatar {
       ctx.fill();
       ctx.restore();
 
-      // Sprite (centralizado horizontalmente, base do sprite alinhada com sy)
+      // Sprite ancorado pelos PÉS REAIS do cão. No quadro 32×32 o cão vai até a
+      // linha ~26 (6px de padding transparente embaixo); sem compensar isso o cão
+      // "flutua" acima da sombra. Empurramos o sprite para baixo por 6*escala.
+      const FEET_PAD = 6; // px transparentes abaixo dos pés no quadro
       ctx.drawImage(
         skinImg,
         srcX, srcY, FRAME_W, FRAME_H,
         sx - dw / 2,
-        sy - dh,       // base do sprite no ponto de tela
+        sy - dh + FEET_PAD * AVATAR_SCALE,  // pés no chão, junto da sombra
         dw, dh
       );
 
