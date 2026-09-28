@@ -248,12 +248,7 @@ export class Avatar {
         dw, dh
       );
 
-      // Destaque do jogador local (borda branca semi-transparente)
-      if (this.isPlayer) {
-        ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(sx - dw / 2 - 1, sy - dh - 1, dw + 2, dh + 2);
-      }
+      // (sem borda/quadrado em volta do jogador — só o nome acima)
     } else {
       // Fallback: círculo colorido enquanto a imagem carrega
       ctx.beginPath();

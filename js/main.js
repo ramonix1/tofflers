@@ -572,16 +572,20 @@ const rtc = new RtcManager({
   videoStrip: document.getElementById('video-strip'),
   selfLabel: () => (player ? player.name : 'Você'),
   onStateChange: (kind, active, denied, reason) => {
-    const btn = mediaButtons[kind];
-    if (!btn) return;
-    btn.classList.toggle('active', active);
-    btn.setAttribute('aria-pressed', String(active));
     const titles = { mic: 'microfone', cam: 'câmera', screen: 'tela' };
-    btn.title = (active ? 'Desativar ' : 'Ativar ') + titles[kind];
+    // Atualiza TODOS os botões daquele tipo: o item do menu E o do dock inferior.
+    const els = [
+      mediaButtons[kind],
+      document.querySelector(`#media-dock [data-media="${kind}"]`),
+    ].filter(Boolean);
+    for (const btn of els) {
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-pressed', String(active));
+      btn.title = (active ? 'Desativar ' : 'Ativar ') + titles[kind];
+      btn.classList.toggle('denied', false);
+    }
     if (denied) {
-      // Marca por instantes mas NÃO trava: o usuário pode clicar de novo para
-      // liberar. Mensagem específica pelo tipo de erro do getUserMedia.
-      btn.classList.add('denied');
+      for (const btn of els) btn.classList.add('denied');
       const nome = titles[kind];
       let msg;
       switch (reason) {
@@ -604,9 +608,7 @@ const rtc = new RtcManager({
           msg = `${nome} indisponível${reason ? ` (${reason})` : ''}. Toque de novo para tentar.`;
       }
       showToast(msg);
-      setTimeout(() => btn.classList.remove('denied'), 4000);
-    } else {
-      btn.classList.remove('denied');
+      setTimeout(() => { for (const btn of els) btn.classList.remove('denied'); }, 4000);
     }
   },
 });
@@ -617,6 +619,84 @@ const rtc = new RtcManager({
 
 // Inicializa o menu de opções (precisa de `rtc` já criado acima)
 initOptionsMenu();
+
+/**
+ * Dock fixo no rodapé (estilo Gather/Zoom) com acesso 1-clique a
+ * microfone / câmera / compartilhar tela. Reaproveita rtc.toggle* e o
+ * onStateChange (que sincroniza o estado destes botões e os do menu).
+ */
+function initMediaDock() {
+  if (document.getElementById('media-dock')) return;
+  const st = document.createElement('style');
+  st.textContent = `
+    #media-dock { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%);
+      display: flex; gap: 8px; padding: 6px 10px; z-index: 60;
+      background: rgba(20,23,34,0.9); border: 1px solid var(--border); border-radius: 999px;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.45); backdrop-filter: blur(6px); }
+    #media-dock .dock-btn { width: 42px; height: 42px; border-radius: 50%;
+      border: 1px solid var(--border); background: rgba(148,163,184,0.12);
+      color: var(--text-primary); font-size: 19px; line-height: 1; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; transition: all 0.12s; }
+    #media-dock .dock-btn:hover { background: rgba(148,163,184,0.28); }
+    #media-dock .dock-btn.active { background: rgba(99,102,241,0.35); border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+    #media-dock .dock-btn.denied { border-color: var(--accent-danger,#ef4444); color: var(--accent-danger,#ef4444); }
+    @media (max-width: 820px) { #media-dock { bottom: calc(10px + env(safe-area-inset-bottom,0px)); } }
+  `;
+  document.head.appendChild(st);
+
+  const dock = document.createElement('div');
+  dock.id = 'media-dock';
+  const defs = [
+    { kind: 'mic',    icon: '🎤', label: 'microfone',        fn: () => rtc.toggleMic() },
+    { kind: 'cam',    icon: '📹', label: 'câmera',           fn: () => rtc.toggleCam() },
+    { kind: 'screen', icon: '🖥️', label: 'compartilhar tela', fn: () => rtc.toggleScreen() },
+  ];
+  for (const d of defs) {
+    const b = document.createElement('button');
+    b.className = 'dock-btn';
+    b.dataset.media = d.kind;
+    b.textContent = d.icon;
+    b.title = 'Ativar ' + d.label;
+    b.setAttribute('aria-pressed', 'false');
+    b.addEventListener('click', d.fn);
+    dock.appendChild(b);
+  }
+  document.body.appendChild(dock);
+}
+initMediaDock();
+
+// ── UX de chat estilo Discord ─────────────────────────────────────────────────
+// Antes só dava para digitar clicando no pequeno campo. Agora: clicar em qualquer
+// lugar da área de chat foca o campo; e, em "modo chat", começar a digitar já
+// joga o texto na caixa (sem mover o boneco).
+(function initChatFocus() {
+  const panel = document.getElementById('chat-panel-wrap') || document.getElementById('chat-panel');
+  const input = document.getElementById('chat-input');
+  const canvasEl = document.getElementById('office-canvas');
+  if (!panel || !input) return;
+
+  let chatMode = false;
+  panel.addEventListener('pointerdown', (e) => {
+    chatMode = true;
+    // não rouba clique de elementos interativos (abas, botões, links, o próprio input)
+    if (!e.target.closest('button, .chat-tab, a, input, textarea')) input.focus();
+  });
+  if (canvasEl) canvasEl.addEventListener('pointerdown', () => { chatMode = false; });
+
+  // Registrado ANTES do handler de teclado do Player → pode interceptar antes de mover.
+  window.addEventListener('keydown', (e) => {
+    if (!chatMode || document.activeElement === input) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key.length === 1) {           // caractere imprimível
+      e.preventDefault();
+      e.stopImmediatePropagation();     // impede o Player de mover com a mesma tecla
+      input.focus();
+      input.value += e.key;
+    } else if (e.key === 'Enter' || e.key === 'Backspace') {
+      input.focus();
+    }
+  });
+})();
 
 net.onSignal = (from, data) => rtc.handleSignal(from, data);
 
