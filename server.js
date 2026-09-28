@@ -274,30 +274,15 @@ function playersSnapshot() {
 // Spawns em células "fundo-aberto" (livres com os 8 vizinhos livres), no salão
 // de cima e na faixa aberta de baixo — ninguém nasce colado/atrás de parede.
 // (col*32+16, row*32+16). Ver mapa em tools/gen-layout.mjs.
-const SPAWN_POINTS = [
-  { x: 336, y: 80 },  { x: 432, y: 80 },  { x: 304, y: 112 },
-  { x: 464, y: 112 }, { x: 368, y: 144 }, { x: 496, y: 144 },
-  { x: 400, y: 208 }, { x: 304, y: 496 }, { x: 400, y: 496 }, { x: 496, y: 496 },
-];
+// PONTO ÚNICO de entrada (recepção/salão). Célula (col 12, row 4) → x=400, y=144:
+// livre, com os 8 vizinhos livres e paredes distantes — ninguém nasce em parede.
+// (Revertido o spawn aleatório, que caía perto de paredes das baias.)
+const SPAWN_POINT = { x: 400, y: 144 };
 function pickSpawn() {
-  const existing = [...players.values()];
-  const jitter = () => Math.round((Math.random() - 0.5) * 16);
-  if (existing.length === 0) {
-    const base = SPAWN_POINTS[Math.floor(Math.random() * SPAWN_POINTS.length)];
-    return { x: base.x + jitter(), y: base.y + jitter() };
-  }
-  // Escolhe o ponto de spawn mais LONGE do jogador mais próximo (menos ocupado).
-  let best = SPAWN_POINTS[0];
-  let bestDist = -1;
-  for (const pt of SPAWN_POINTS) {
-    let nearest = Infinity;
-    for (const p of existing) {
-      const d = Math.hypot(pt.x - p.x, pt.y - p.y);
-      if (d < nearest) nearest = d;
-    }
-    if (nearest > bestDist) { bestDist = nearest; best = pt; }
-  }
-  return { x: best.x + jitter(), y: best.y + jitter() };
+  // Jitter mínimo só para não empilhar todos exatamente no mesmo pixel — fica
+  // dentro da mesma célula aberta.
+  const j = () => Math.round((Math.random() - 0.5) * 10);
+  return { x: SPAWN_POINT.x + j(), y: SPAWN_POINT.y + j() };
 }
 
 // ─── Handlers de mensagens WS ─────────────────────────────────────────────────
