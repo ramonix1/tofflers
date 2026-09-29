@@ -406,6 +406,11 @@ export class RtcManager {
     const stream = ev.streams[0] || new MediaStream([track]);
     const mid = ev.transceiver && ev.transceiver.mid;
 
+    console.log(`[rtc] ◀ track ${track.kind} de ${peer.id} | muted=${track.muted} readyState=${track.readyState}`);
+    // muted=true no início é normal; onunmute = frames começaram a chegar.
+    track.onunmute = () => console.log(`[rtc] ▶ track ${track.kind} UNMUTE (frames chegando) de ${peer.id}`);
+    track.onmute   = () => console.log(`[rtc] ⏸ track ${track.kind} MUTE (sem frames) de ${peer.id}`);
+
     if (track.kind === 'audio') {
       this._setupRemoteAudio(peer, stream);
     } else {
@@ -457,6 +462,13 @@ export class RtcManager {
       peer.tiles.set(key, tile);
     }
     tile.video.srcObject = stream;
+    // play() explícito: o atributo autoplay nem sempre dispara para <video> com
+    // srcObject setado após inserção no DOM → tile fica preto/vazio. Isto resolve.
+    tile.video.play().catch((e) => console.warn(`[rtc] video.play() falhou (${kind}):`, e && e.name));
+    tile.video.onloadedmetadata = () => {
+      console.log(`[rtc] vídeo ${kind} de ${peer.id}: ${tile.video.videoWidth}×${tile.video.videoHeight}`);
+      tile.video.play().catch(() => {});
+    };
     this._relabelTile(peer, key, kind);
 
     track.onended = () => {
