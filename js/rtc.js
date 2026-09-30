@@ -454,21 +454,44 @@ export class RtcManager {
       video.autoplay = true; video.playsInline = true; video.muted = true;
       const label = document.createElement('div');
       label.className = 'video-label';
+      // Status VISÍVEL (diagnóstico sem console): fica sobre o tile até chegarem frames.
+      const status = document.createElement('div');
+      status.className = 'video-status';
+      status.textContent = 'conectando vídeo…';
+      status.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:8px;font-size:11px;color:#cbd5e1;background:rgba(10,12,20,0.85);z-index:1;';
       wrap.appendChild(video);
       wrap.appendChild(label);
+      wrap.appendChild(status);
       this.videoStrip.appendChild(wrap);
       this._makeTileInteractive(wrap, kind);
-      tile = { wrap, video, label, kind };
+      tile = { wrap, video, label, kind, status };
       peer.tiles.set(key, tile);
     }
-    tile.video.srcObject = stream;
-    // play() explícito: o atributo autoplay nem sempre dispara para <video> com
-    // srcObject setado após inserção no DOM → tile fica preto/vazio. Isto resolve.
-    tile.video.play().catch((e) => console.warn(`[rtc] video.play() falhou (${kind}):`, e && e.name));
+
+    // Stream robusto: garante que o track recebido esteja no MediaStream anexado.
+    const vstream = stream && stream.getVideoTracks && stream.getVideoTracks().length
+      ? stream : new MediaStream([track]);
+    tile.video.srcObject = vstream;
+
+    // Remove o status assim que houver frames de verdade.
+    const clearStatus = () => { if (tile.status) { tile.status.remove(); tile.status = null; } };
     tile.video.onloadedmetadata = () => {
       console.log(`[rtc] vídeo ${kind} de ${peer.id}: ${tile.video.videoWidth}×${tile.video.videoHeight}`);
-      tile.video.play().catch(() => {});
+      tile.video.play().then(clearStatus).catch(() => {});
     };
+    tile.video.onplaying = clearStatus;
+    track.addEventListener('unmute', clearStatus);
+    // Se em 7s não chegou frame, mostra "SEM SINAL" (frames não estão fluindo).
+    setTimeout(() => {
+      if (tile.status && (tile.video.videoWidth === 0 || tile.video.paused)) {
+        tile.status.textContent = 'SEM SINAL de vídeo — frames não chegam (me avise)';
+        tile.status.style.color = '#fca5a5';
+      }
+    }, 7000);
+
+    // play() explícito: o atributo autoplay nem sempre dispara para <video> com
+    // srcObject setado após inserção no DOM → tile fica preto/vazio.
+    tile.video.play().catch((e) => console.warn(`[rtc] video.play() falhou (${kind}):`, e && e.name));
     this._relabelTile(peer, key, kind);
 
     track.onended = () => {
