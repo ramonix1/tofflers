@@ -5,35 +5,28 @@ Protótipo visual de escritório virtual estilo Gather/Kumospace para equipe de 
 
 ## Como rodar
 
-```bash
-cd /home/itarget/enterprise
-python3 -m http.server 8080
-# Abra http://localhost:8080 no navegador
-```
-
-## Atalho na área de trabalho
-
-Clicar no ícone **Enterprise** (na busca do GNOME ou fixado no dock) abre o escritório
-direto no navegador, **sem abrir terminal**. O servidor roda em segundo plano como serviço
-`systemd --user` (`enterprise.service`), desacoplado do ícone — continua no ar mesmo depois
-de fechar a janela. O Chrome abre em **modo app** (janela sem abas) com **perfil dedicado**
-(`~/.local/share/enterprise-chrome`), o que evita restaurar sessão antiga / abrir segunda
-janela / usar cache velho.
-
-Para encerrar o servidor, use o ícone **Parar Enterprise** ou:
-`systemctl --user stop enterprise.service`.
-
-Peças: `abrir-enterprise.sh` / `parar-enterprise.sh` (launchers), `enterprise.desktop` /
-`parar-enterprise.desktop` (atalhos, instalados em `~/.local/share/applications/`),
-`static/icone.svg` + `static/icone.png` (ícone) e `~/.config/systemd/user/enterprise.service`.
-O launcher tem fallback para `setsid`/`nohup` caso o systemd do usuário não esteja disponível.
-Reinstalar após mudar de pasta:
+O servidor (`server.js`, Node + `ws`) roda como serviço `systemd --user`
+(`enterprise.service`, porta 8080) e sobe junto um túnel cloudflared "quick" — **todo mundo,
+inclusive o anfitrião, entra por link público**.
 
 ```bash
-systemctl --user daemon-reload
-cp enterprise.desktop parar-enterprise.desktop ~/.local/share/applications/
-update-desktop-database ~/.local/share/applications
+./link-enterprise.sh   # sobe o serviço (se preciso) e imprime o link do anfitrião
 ```
+
+- **Link do anfitrião** — `<túnel>/?h=<chave>`. A chave fica em `data/host-key` (gerada uma vez,
+  0600) e o link atual em `data/host-link.txt`. É secreto: não compartilhe. Ao abrir, a chave sai
+  da barra de endereço e fica só na aba (F5 continua valendo).
+- **Convidados** — botão **🔗 Convidar** gera `<túnel>/?k=<token da sessão>`. "Parar de
+  compartilhar" gira o token (o link antigo não entra mais; quem já está dentro permanece).
+- **Sessão** — nasce quando o anfitrião conecta e acaba ~8s depois que ele sai: convidados caem,
+  o chat é arquivado e o token é renovado. O túnel não cai com a sessão.
+- O endereço do túnel (trycloudflare) muda a cada reinício do serviço; rode `./link-enterprise.sh`
+  de novo. Se o cloudflared cair, o servidor religa sozinho (backoff 5s a 60s).
+- Parar o serviço: `systemctl --user stop enterprise.service`. Logs:
+  `journalctl --user -u enterprise.service`.
+
+Testes: `node tools/session-e2e.mjs` (autenticação e ciclo de sessão; usa `HOST_KEY` +
+`TEST_TUNNEL_URL` e um `data/` descartável via `ENTERPRISE_DATA_DIR`).
 
 ## Controles
 

@@ -79,7 +79,176 @@ export class RtcManager {
         senders: Object.entries(p.senders).filter(([, s]) => s).map(([k]) => k).join(',') || '(nenhum)',
       }));
       window.rtcAudioCtx = () => this.audioCtx && this.audioCtx.state;
+      // rtcStats() → estado de transporte + bytes/pacotes de áudio/vídeo por peer
+      // (distingue "sinalização falhou" de "RTP de vídeo não chega"). Retorna Promise.
+      window.rtcStats = () => Promise.all([...this.peers.values()].map((p) => this._statsSummary(p)));
     } catch { /* noop */ }
+  }
+
+  /** Resumo de getStats() de um peer: par ICE ativo, m-lines e contadores RTP. */
+  async _statsSummary(peer) {
+    const out = { id: peer.id, conn: peer.pc.connectionState, sig: peer.pc.signalingState };
+    try {
+      out.mlines = peer.pc.getTransceivers().map((t) =>
+        `${t.mid}:${t.receiver.track.kind}:${t.direction}/${t.currentDirection}`);
+      const rep = await peer.pc.getStats();
+      const byId = new Map(); rep.forEach((r) => byId.set(r.id, r));
+      rep.forEach((r) => {
+        if (r.type === 'transport' && r.selectedCandidatePairId) {
+          const pair = byId.get(r.selectedCandidatePairId);
+          const l = pair && byId.get(pair.localCandidateId), rm = pair && byId.get(pair.remoteCandidateId);
+          if (pair) out.pair = `${l && l.candidateType}/${l && l.protocol} -> ${rm && rm.candidateType}/${rm && rm.protocol} rtt=${pair.currentRoundTripTime}`;
+        } else if (r.type === 'outbound-rtp') {
+          (out.out = out.out || []).push(`${r.kind} sent=${r.packetsSent}pk/${r.bytesSent}B enc=${r.encoderImplementation || '-'} lim=${r.qualityLimitationReason || '-'}`);
+        } else if (r.type === 'inbound-rtp') {
+          (out.in = out.in || []).push(`${r.kind} recv=${r.packetsReceived}pk/${r.bytesReceived}B lost=${r.packetsLost} dec=${r.framesDecoded ?? '-'}`);
+        }
+      });
+    } catch (e) { out.err = String(e); }
+    return out;
+  }
+
+  // ── Diagnóstico de vídeo (botão no menu Opções) ─────────────────────────────
+
+  /** Coleta numérica de getStats() de um peer (para comparar duas amostras). */
+  async _statsRaw(peer) {
+    const pc = peer.pc;
+    const o = { pair: '?', rtt: null, mlines: [], rtp: {}, codecs: {} };
+    o.mlines = pc.getTransceivers().map((t) => `${t.mid}:${t.receiver.track.kind}:${t.direction}/${t.currentDirection}`);
+    const rep = await pc.getStats();
+    const byId = new Map(); rep.forEach((r) => byId.set(r.id, r));
+    rep.forEach((r) => {
+      if (r.type === 'transport' && r.selectedCandidatePairId) {
+        const pr = byId.get(r.selectedCandidatePairId);
+        const l = pr && byId.get(pr.localCandidateId), rm = pr && byId.get(pr.remoteCandidateId);
+        if (pr) {
+          o.pair = `${l && l.candidateType}/${l && l.protocol} -> ${rm && rm.candidateType}/${rm && rm.protocol}`;
+          o.rtt = pr.currentRoundTripTime;
+        }
+      } else if (r.type === 'outbound-rtp' || r.type === 'inbound-rtp') {
+        const dir = r.type === 'outbound-rtp' ? 'out' : 'in';
+        const codec = r.codecId && byId.get(r.codecId);
+        o.rtp[`${dir} ${r.kind}${r.rid ? '/' + r.rid : ''}`] = {
+          pk: dir === 'out' ? r.packetsSent : r.packetsReceived,
+          bytes: dir === 'out' ? r.bytesSent : r.bytesReceived,
+          lost: r.packetsLost,
+          frames: dir === 'out' ? r.framesEncoded : r.framesDecoded,
+          codec: codec ? codec.mimeType : '-',
+          limit: r.qualityLimitationReason,
+          impl: r.encoderImplementation || r.decoderImplementation,
+        };
+      }
+    });
+    return o;
+  }
+
+  /**
+   * Gera o relatório de diagnóstico em texto puro. Duas amostras (≈3 s) mostram se
+   * os contadores de pacotes AVANÇAM (RTP fluindo) ou estão parados.
+   * @param {{isHost?:boolean, participants?:number}} [extra]
+   */
+  async diagnose(extra = {}) {
+    const peers = [...this.peers.values()];
+    const sample = () => Promise.all(peers.map((p) => this._statsRaw(p).catch((e) => ({ err: String(e) }))));
+    const s1 = await sample();
+    await new Promise((r) => setTimeout(r, 3000));
+    const s2 = await sample();
+
+    const L = [];
+    L.push('=== Diagnóstico de vídeo — Toffies ===');
+    L.push(`Quando: ${new Date().toISOString()}`);
+    L.push(`Navegador: ${navigator.userAgent}`);
+    L.push(`Papel: ${extra.isHost ? 'ANFITRIÃO' : 'convidado'} | Participantes: ${extra.participants ?? '?'} | Peers RTC: ${peers.length}`);
+    L.push(`Página: ${location.origin} | AudioContext: ${this.audioCtx ? this.audioCtx.state : 'n/a'}`);
+    L.push('');
+    L.push('-- Mídia local --');
+    for (const k of ['mic', 'cam', 'screen']) {
+      const t = this.local[k];
+      if (!t) { L.push(`${k}: desligado`); continue; }
+      const st = t.getSettings ? t.getSettings() : {};
+      L.push(`${k}: ${t.kind} enabled=${t.enabled} readyState=${t.readyState} muted=${t.muted} label="${t.label}"` +
+        (st.width ? ` ${st.width}x${st.height}@${st.frameRate ? Math.round(st.frameRate) : '?'}` : ''));
+    }
+    peers.forEach((peer, i) => {
+      const a = s1[i], b = s2[i];
+      L.push('');
+      L.push(`-- Peer ${this._peerName(peer)} (${peer.id}) --`);
+      L.push(`connectionState=${peer.pc.connectionState} ice=${peer.pc.iceConnectionState} signaling=${peer.pc.signalingState} polite=${peer.polite} ganho=${peer.gainTarget.toFixed(2)}`);
+      if (!b || b.err) { L.push(`erro nas stats: ${b && b.err}`); return; }
+      L.push(`Par ICE: ${b.pair} | RTT=${b.rtt != null ? Math.round(b.rtt * 1000) + 'ms' : '?'}`);
+      L.push(`m-lines: ${b.mlines.join('  ')}`);
+      for (const key of Object.keys(b.rtp)) {
+        const x = b.rtp[key], y = (a && a.rtp && a.rtp[key]) || {};
+        const dpk = x.pk - (y.pk || 0), dby = x.bytes - (y.bytes || 0);
+        const fr = x.frames != null ? ` frames=${x.frames}(+${x.frames - (y.frames || 0)})` : '';
+        L.push(`${key}: pacotes=${x.pk}(+${dpk}/3s) bytes=${x.bytes}(+${dby})${x.lost != null ? " perdidos=" + x.lost : ""}${fr} codec=${x.codec}` +
+          `${x.impl ? ' impl=' + x.impl : ''}${x.limit ? ' limite=' + x.limit : ''}  ${dpk > 0 ? 'AVANÇANDO' : 'PARADO'}`);
+      }
+      if (!Object.keys(b.rtp).some((k) => k.includes('video'))) L.push('(sem fluxo RTP de vídeo neste peer)');
+      L.push('Tiles remotos:');
+      if (!peer.tiles.size) L.push('  (nenhum tile de vídeo deste peer)');
+      for (const [mid, t] of peer.tiles) {
+        const v = t.video;
+        L.push(`  mid=${mid} tipo=${t.kind} videoWidth=${v.videoWidth} readyState=${v.readyState} paused=${v.paused} status=${t.status ? 'SOBREPOSTO' : 'ok'}`);
+      }
+    });
+    L.push('');
+    L.push('-- Tiles locais --');
+    for (const k of ['cam', 'screen']) L.push(`${k}: ${this._selfTiles[k] ? 'visível' : '-'}`);
+    return L.join('\n');
+  }
+
+  /** Mostra o texto num modal (textarea somente-leitura pré-selecionado) com Copiar/Fechar. */
+  showDiagnosticModal(text, note) {
+    const old = document.getElementById('rtc-diag-modal');
+    if (old) old.remove();
+    const back = document.createElement('div');
+    back.id = 'rtc-diag-modal';
+    back.className = 'invite-modal-backdrop visible';
+    const box = document.createElement('div');
+    box.className = 'invite-modal-box';
+    box.style.maxWidth = '640px';
+    const head = document.createElement('div');
+    head.className = 'invite-modal-header';
+    const h = document.createElement('h3');
+    h.textContent = '🩺 Diagnóstico de vídeo';
+    head.appendChild(h);
+    const info = document.createElement('div');
+    info.style.cssText = 'font-size:12px;color:var(--text-muted);';
+    info.textContent = note || 'Copie o texto abaixo e envie para o Ramon.';
+    const ta = document.createElement('textarea');
+    ta.readOnly = true;
+    ta.value = text;
+    ta.style.cssText = 'width:100%;height:300px;resize:vertical;font:11px/1.4 monospace;background:var(--bg-base,#0a0c12);color:var(--text-primary,#e5e7eb);border:1px solid var(--border,#334155);border-radius:6px;padding:8px;box-sizing:border-box;';
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;';
+    const mk = (label) => { const b = document.createElement('button'); b.className = 'options-item'; b.style.width = 'auto'; b.textContent = label; return b; };
+    const bCopy = mk('Copiar'), bClose = mk('Fechar');
+    bCopy.addEventListener('click', () => {
+      ta.focus(); ta.select();
+      let ok = false;
+      try { ok = document.execCommand('copy'); } catch { /* noop */ }
+      bCopy.textContent = ok ? 'Copiado!' : 'Selecione e use Ctrl+C';
+    });
+    bClose.addEventListener('click', () => back.remove());
+    row.append(bCopy, bClose);
+    box.append(head, info, ta, row);
+    back.appendChild(box);
+    document.body.appendChild(back);
+    ta.focus(); ta.select();
+  }
+
+  /** Executa o diagnóstico e entrega o texto (clipboard ou modal de fallback). */
+  async runDiagnostic(extra = {}) {
+    let text;
+    try { text = await this.diagnose(extra); } catch (e) { text = 'Falha ao gerar diagnóstico: ' + e; }
+    try {
+      await navigator.clipboard.writeText(text);
+      this.showDiagnosticModal(text, 'Diagnóstico COPIADO para a área de transferência. Cole na conversa com o Ramon (o texto abaixo é só conferência).');
+    } catch {
+      this.showDiagnosticModal(text);
+    }
+    return text;
   }
 
   /** ID do jogador local (só existe após o welcome). */
@@ -486,6 +655,8 @@ export class RtcManager {
       if (tile.status && (tile.video.videoWidth === 0 || tile.video.paused)) {
         tile.status.textContent = 'SEM SINAL de vídeo — frames não chegam (me avise)';
         tile.status.style.color = '#fca5a5';
+        // Evidência para diagnóstico: o que o transporte/RTP está fazendo agora.
+        this._statsSummary(peer).then((st) => console.warn('[rtc] SEM SINAL — stats:', JSON.stringify(st)));
       }
     }, 7000);
 

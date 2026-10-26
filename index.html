@@ -187,7 +187,7 @@
         <div class="chat-tabs" id="chat-tabs">
           <div class="chat-tab active" data-channel="geral">Geral</div>
           <div class="chat-tab" data-channel="local">🔊 Local</div>
-          <!-- DMs injetadas via chat.js -->
+          <!-- DMs injetadas via chat.js (abas quebram de linha; área rola após ~3 linhas) -->
         </div>
 
         <!-- Mensagens -->
@@ -225,7 +225,7 @@
 
       <!-- Estado: pronto -->
       <div id="invite-state-ready" class="invite-state" style="display:none">
-        <p class="invite-hint">Envie este link para a pessoa. Enquanto o escritório estiver aberto, ela entra por aqui.</p>
+        <p class="invite-hint">Envie este link para a pessoa. Enquanto você estiver no escritório, ela entra por aqui. "Parar de compartilhar" invalida este link para novas entradas.</p>
         <div class="invite-url-row">
           <input id="invite-url-input" type="text" readonly class="invite-url-input" />
           <button id="invite-copy-btn" class="btn-primary invite-copy-btn">Copiar</button>
@@ -237,7 +237,6 @@
       <div id="invite-state-error" class="invite-state" style="display:none">
         <p class="invite-error-icon">⚠️</p>
         <p id="invite-error-msg" class="invite-error-text"></p>
-        <p class="invite-error-fallback">Como alternativa, rode <code>./compartilhar-enterprise.sh</code> no terminal.</p>
         <button id="invite-retry-btn" class="btn-ghost">Tentar novamente</button>
       </div>
     </div>

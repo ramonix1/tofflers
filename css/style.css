@@ -807,16 +807,21 @@ body {
 
 .chat-tabs {
   display: flex;
+  flex-wrap: wrap;          /* todas as abas visíveis; quebram de linha */
+  align-content: flex-start;
+  gap: 0 2px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
+  max-height: 96px;         /* ~3 linhas; acima disso rola na vertical */
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
-
-.chat-tabs::-webkit-scrollbar { display: none; }
+.chat-tabs::-webkit-scrollbar { width: 4px; }
+.chat-tabs::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
 .chat-tab {
-  padding: 8px 12px;
+  padding: 6px 8px;
   font-size: 11px;
   font-weight: 600;
   color: var(--text-muted);
@@ -825,6 +830,15 @@ body {
   white-space: nowrap;
   transition: all 0.15s;
   flex-shrink: 0;
+}
+
+/* Nome longo em DM: reticências */
+.chat-tab-name {
+  display: inline-block;
+  max-width: 84px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
 }
 
 .chat-tab:hover { color: var(--text-secondary); }

@@ -101,16 +101,16 @@ export class Chat {
     dot.style.verticalAlign = 'middle';
 
     tab.appendChild(dot);
-    tab.appendChild(document.createTextNode(name));
+    // Nome truncado com reticências (nome completo no title)
+    const nameEl = document.createElement('span');
+    nameEl.className = 'chat-tab-name';
+    nameEl.textContent = name;
+    tab.title = name;
+    tab.appendChild(nameEl);
     tab.addEventListener('click', () => this._switchChannel(channelId));
 
-    // Insere logo após a aba Local
-    const localTab = this._tabsEl.querySelector('.chat-tab[data-channel="local"]');
-    if (localTab && localTab.nextSibling) {
-      this._tabsEl.insertBefore(tab, localTab.nextSibling);
-    } else {
-      this._tabsEl.appendChild(tab);
-    }
+    // Ordem estável: novas DMs entram no fim (as abas quebram de linha)
+    this._tabsEl.appendChild(tab);
   }
 
   _switchChannel(channelId) {
@@ -122,6 +122,7 @@ export class Chat {
       if (tab.dataset.channel === channelId) {
         const dotEl = tab.querySelector('.unread-dot');
         if (dotEl) dotEl.remove();
+        tab.scrollIntoView({ block: 'nearest' }); // >3 linhas: traz a aba para a vista
       }
     }
 

@@ -3,6 +3,8 @@
  * Conecta ao servidor /ws, gerencia reconexão automática e throttle de moves.
  */
 
+import { getHostKey } from './host-key.js';
+
 export class Net {
   constructor() {
     /** ID do jogador atual (recebido no welcome) */
@@ -18,6 +20,10 @@ export class Net {
     this.onSprint     = null; // (sprint: object) => void
     this.onSignal     = null; // (from: string, data: object) => void  — sinalização WebRTC
     this.onLayout     = null; // (layout: object) => void              — layout unificado
+    this.onSessionEnd = null; // (reason: 'session_end'|'invalid') => void — sessão acabou / link inválido (NÃO reconecta)
+
+    /** Id público da sessão do servidor (detecta troca de sessão numa reconexão) */
+    this._sessionId = null;
 
     /** @type {WebSocket|null} */
     this._ws = null;
@@ -55,7 +61,14 @@ export class Net {
    */
   _wsURL() {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    return `${proto}://${location.host}/ws`;
+    // Convidado: o token da sessão vem no link (?k=...) e segue no handshake.
+    // Anfitrião: a chave (?h=) vem de host-key.js (sessionStorage; já saiu da barra de endereço).
+    const k = new URLSearchParams(location.search).get('k');
+    const h = getHostKey();
+    const qs = [];
+    if (k) qs.push(`k=${encodeURIComponent(k)}`);
+    if (h) qs.push(`h=${encodeURIComponent(h)}`);
+    return `${proto}://${location.host}/ws${qs.length ? `?${qs.join('&')}` : ''}`;
   }
 
   /**
@@ -91,7 +104,13 @@ export class Net {
       this._handleMessage(msg);
     });
 
-    this._ws.addEventListener('close', () => {
+    this._ws.addEventListener('close', (ev) => {
+      // 4400 = sessão encerrada pelo anfitrião; 4401 = token inválido/sem sessão.
+      // Em ambos NÃO se reconecta (o link morreu).
+      if (ev.code === 4400 || ev.code === 4401) {
+        this._endSession(ev.code === 4401 ? 'invalid' : 'session_end');
+        return;
+      }
       if (this._intentionallyClosed) return;
       console.log(`[net] Desconectado — reconectando em ${this._reconnectDelay}ms`);
       setTimeout(() => this._openWS(), this._reconnectDelay);
@@ -103,8 +122,30 @@ export class Net {
     });
   }
 
+  /** Para tudo (sem reconectar) e avisa a UI — só dispara uma vez. */
+  _endSession(reason) {
+    if (this._sessionEnded) return;
+    this._sessionEnded = true;
+    this._intentionallyClosed = true;
+    this._sendQueue = [];
+    this._pendingMove = null;
+    clearInterval(this._moveInterval);
+    try { if (this._ws) this._ws.close(); } catch { /* noop */ }
+    try { if (this.onSessionEnd) this.onSessionEnd(reason); }
+    catch (e) { console.error('[net] onSessionEnd falhou:', e); }
+  }
+
   _handleMessage(msg) {
     switch (msg.t) {
+      case 'session_end':
+        this._endSession('session_end');
+        break;
+      case 'session':
+        // Reconectou numa sessão DIFERENTE (o host ficou fora além da tolerância):
+        // o estado local (chat, jogadores) é de outra sessão — recarrega do zero.
+        if (this._sessionId && msg.id && this._sessionId !== msg.id) { location.reload(); return; }
+        this._sessionId = msg.id || this._sessionId;
+        break;
       case 'welcome':
         this.youId = msg.youId;
         // onWelcome PRIMEIRO (jogadores + chat), e cada callback isolado em try/catch:

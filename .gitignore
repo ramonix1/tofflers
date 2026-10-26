@@ -3,3 +3,5 @@ data/state.json
 data/toffies.db
 data/toffies.db-*
 *.log
+data/host-key
+data/host-link.txt

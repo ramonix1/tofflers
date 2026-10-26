@@ -1,7 +1,7 @@
 /**
  * Enterprise — Servidor Multiplayer
  * HTTP estático + WebSocket (/ws) + Persistência em JSON
- * Porta 8080
+ * Porta 8080 (ou env PORT)
  */
 import http from 'node:http';
 import fs from 'node:fs';
@@ -9,6 +9,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { spawn } from 'node:child_process';
+import crypto from 'node:crypto';
 import { DatabaseSync } from 'node:sqlite';
 import { getZoneAt, MAP, ZONES } from './js/office.js';
 import { AUDIO_RADIUS } from './js/spatial.js';
@@ -17,13 +18,16 @@ import { generateSeedLayout } from './js/layout.js';
 // ─── Caminhos ────────────────────────────────────────────────────────────────
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const STATIC_ROOT = __dirname;
-const DATA_DIR = path.join(__dirname, 'data');
+const PORT = Number(process.env.PORT) || 8080;
+// ENTERPRISE_DATA_DIR: usado pelos testes para não tocar nos dados/link reais.
+const DATA_DIR = process.env.ENTERPRISE_DATA_DIR
+  ? path.resolve(process.env.ENTERPRISE_DATA_DIR)
+  : path.join(__dirname, 'data');
 const STATE_FILE  = path.join(DATA_DIR, 'state.json');
 // Banco (SQLite embutido do Node) — arquivo histórico das sessões de chat.
 const DB_FILE     = path.join(DATA_DIR, 'toffies.db');
-// Início desta sessão (= processo). O chat é EFÊMERO por sessão: nasce vazio a
-// cada boot e, no encerramento, é arquivado no SQLite.
-const SESSION_STARTED = Date.now();
+// O chat é EFÊMERO por sessão (= presença do host, ver "Sessão" abaixo): nasce
+// vazio a cada sessão e, ao encerrá-la, é arquivado no SQLite.
 const LAYOUT_FILE = path.join(DATA_DIR, 'layout.json');
 
 // ─── MIME types ───────────────────────────────────────────────────────────────
@@ -143,15 +147,13 @@ function initDb() {
   }
 }
 
-let _archived = false;
 /**
- * Arquiva a conversa desta sessão no SQLite e retorna. Idempotente.
- * Chamado no encerramento (SIGTERM/SIGINT/exit). Síncrono (DatabaseSync),
- * seguro para rodar em handler de saída.
+ * Arquiva a conversa da sessão corrente no SQLite e ZERA o chat em memória.
+ * Pode ser chamado várias vezes por processo (fim de sessão, SIGTERM, exit):
+ * como o chat é limpo após arquivar, uma 2ª chamada não duplica linhas.
+ * Síncrono (DatabaseSync), seguro para rodar em handler de saída.
  */
 function archiveSession() {
-  if (_archived) return;
-  _archived = true;
   try {
     if (!db) initDb();
     if (!db) return;
@@ -162,11 +164,12 @@ function archiveSession() {
       for (const m of (arr || [])) dmMsgs.push({ ...m, dm_key: key });
     }
     const total = geral.length + dmMsgs.length;
+    state.chat = { geral: [], dm: {} }; // limpa já: nunca arquiva a mesma conversa 2x
     if (total === 0) return; // sessão sem conversa — nada a arquivar
     const endedAt = Date.now();
     const sres = db.prepare(
       'INSERT INTO sessions (started_at, ended_at, message_count) VALUES (?,?,?)'
-    ).run(SESSION_STARTED, endedAt, total);
+    ).run(session.startedAt, endedAt, total);
     const sessionId = Number(sres.lastInsertRowid);
     const ins = db.prepare(
       'INSERT INTO messages (session_id, channel, dm_key, from_id, name, role, text, ts) VALUES (?,?,?,?,?,?,?,?)'
@@ -458,23 +461,106 @@ function handleLayoutSet(msg) {
   console.log('[layout] Atualizado e propagado para todos os clientes');
 }
 
-// ─── Gerenciador de Túnel Cloudflare ─────────────────────────────────────────
+// ─── Chave do anfitrião ───────────────────────────────────────────────────────
+// Todo mundo entra por link público; o anfitrião é quem apresenta esta chave
+// (?h= no WebSocket, X-Host-Key nas rotas /api/invite* e /api/session*).
+// Gerada uma vez e persistida; HOST_KEY (env) sobrepõe — usado nos testes.
+const HOST_KEY_FILE  = path.join(DATA_DIR, 'host-key');
+const HOST_LINK_FILE = path.join(DATA_DIR, 'host-link.txt');
 
-/** @type {{ proc: import('child_process').ChildProcess|null, url: string|null, status: 'off'|'starting'|'ready'|'error', error: string|null }} */
-const tunnel = { proc: null, url: null, status: 'off', error: null };
+function loadHostKey() {
+  if (process.env.HOST_KEY) return process.env.HOST_KEY;
+  try {
+    const k = fs.readFileSync(HOST_KEY_FILE, 'utf8').trim();
+    if (k) return k;
+  } catch { /* ainda não existe — gera abaixo */ }
+  const k = crypto.randomBytes(24).toString('base64url'); // 192 bits
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  fs.writeFileSync(HOST_KEY_FILE, k + '\n', { mode: 0o600 });
+  try { fs.chmodSync(HOST_KEY_FILE, 0o600); } catch { /* ignorar */ }
+  return k;
+}
+const HOST_KEY = loadHostKey();
+
+/** Comparação em tempo constante (hash antes, para igualar tamanhos). */
+function hostKeyMatches(given) {
+  if (!given) return false;
+  const a = crypto.createHash('sha256').update(String(given)).digest();
+  const b = crypto.createHash('sha256').update(HOST_KEY).digest();
+  return crypto.timingSafeEqual(a, b);
+}
+
+// ─── Gerenciador de Túnel Cloudflare ─────────────────────────────────────────
+// O túnel vive enquanto o processo viver (o anfitrião entra por ele). Se o
+// cloudflared morrer ou falhar, religa sozinho com backoff.
+
+/** @type {{ proc: import('child_process').ChildProcess|null, url: string|null, status: 'off'|'starting'|'ready'|'error', error: string|null, retryTimer: NodeJS.Timeout|null, backoff: number, stopping: boolean }} */
+const tunnel = { proc: null, url: null, status: 'off', error: null, retryTimer: null, backoff: 5000, stopping: false };
 
 const TUNNEL_URL_RE = /https:\/\/[a-z0-9-]+\.trycloudflare\.com/;
+const TUNNEL_BACKOFF_MIN = 5000;
+const TUNNEL_BACKOFF_MAX = 60000;
+
+function removeHostLink() {
+  try { fs.unlinkSync(HOST_LINK_FILE); } catch { /* já não existe */ }
+}
+
+/** Túnel pronto: zera o backoff e publica o link do anfitrião (arquivo + log). */
+function onTunnelReady() {
+  tunnel.backoff = TUNNEL_BACKOFF_MIN;
+  const link = `${tunnel.url}/?h=${HOST_KEY}`;
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    fs.writeFileSync(HOST_LINK_FILE, link + '\n', { mode: 0o600 });
+    fs.chmodSync(HOST_LINK_FILE, 0o600);
+  } catch (err) {
+    console.error('[tunnel] não consegui gravar host-link.txt:', err.message);
+  }
+  console.log(`[enterprise] Link do anfitrião: ${link}`);
+}
+
+/** Agenda religação do túnel (backoff 5s dobrando até 60s). Idempotente. */
+function scheduleTunnelRetry() {
+  if (tunnel.stopping || tunnel.retryTimer) return;
+  const delay = tunnel.backoff;
+  tunnel.backoff = Math.min(tunnel.backoff * 2, TUNNEL_BACKOFF_MAX);
+  console.log(`[tunnel] religando em ${Math.round(delay / 1000)}s`);
+  tunnel.retryTimer = setTimeout(() => {
+    tunnel.retryTimer = null;
+    ensureTunnel();
+  }, delay);
+}
+
+/** Túnel caiu/falhou: limpa estado, apaga o link do anfitrião e agenda religação. */
+function onTunnelDown(message) {
+  tunnel.proc = null;
+  tunnel.url = null;
+  tunnel.status = 'error';
+  if (message) tunnel.error = message;
+  removeHostLink();
+  scheduleTunnelRetry();
+}
 
 /**
- * Garante que o túnel está rodando. Faz spawn se `off`; retorna imediatamente
- * se já está `starting` ou `ready`. O front faz polling em GET /api/invite.
+ * Garante que o túnel está rodando. Faz spawn se `off`/`error`; retorna
+ * imediatamente se já está `starting` ou `ready`. O front faz polling em GET /api/invite.
  */
 function ensureTunnel() {
   if (tunnel.status === 'ready' || tunnel.status === 'starting') return;
+  if (tunnel.retryTimer) { clearTimeout(tunnel.retryTimer); tunnel.retryTimer = null; }
 
+  tunnel.stopping = false;
   tunnel.status = 'starting';
   tunnel.url = null;
   tunnel.error = null;
+
+  // Gancho de teste (tools/session-e2e.mjs): simula túnel pronto sem rodar cloudflared.
+  if (process.env.TEST_TUNNEL_URL) {
+    tunnel.url = process.env.TEST_TUNNEL_URL;
+    tunnel.status = 'ready';
+    onTunnelReady();
+    return;
+  }
 
   const extraPaths = [
     process.env.HOME ? `${process.env.HOME}/.local/bin` : '',
@@ -484,14 +570,13 @@ function ensureTunnel() {
 
   let proc;
   try {
-    proc = spawn('cloudflared', ['tunnel', '--url', 'http://localhost:8080'], {
+    proc = spawn('cloudflared', ['tunnel', '--url', `http://localhost:${PORT}`], {
       env: { ...process.env, PATH: [process.env.PATH, ...extraPaths].join(':') },
       stdio: ['ignore', 'pipe', 'pipe'],
     });
   } catch (err) {
-    tunnel.status = 'error';
-    tunnel.error = `Falha ao iniciar cloudflared: ${err.message}`;
     console.error('[tunnel] spawn error:', err.message);
+    onTunnelDown(`Falha ao iniciar cloudflared: ${err.message}`);
     return;
   }
 
@@ -499,13 +584,14 @@ function ensureTunnel() {
 
   // cloudflared imprime a URL em stderr (quick tunnel)
   function scanForUrl(chunk) {
-    if (tunnel.status === 'ready') return;
+    if (tunnel.proc !== proc || tunnel.status === 'ready') return;
     const text = chunk.toString();
     const m = text.match(TUNNEL_URL_RE);
     if (m) {
       tunnel.url = m[0];
       tunnel.status = 'ready';
       console.log('[tunnel] URL pronta:', tunnel.url);
+      onTunnelReady();
     }
   }
 
@@ -513,37 +599,33 @@ function ensureTunnel() {
   proc.stderr.on('data', scanForUrl);
 
   proc.on('error', (err) => {
-    if (tunnel.status === 'ready') return; // já obtivemos a URL — ignorar erros tardios
-    tunnel.status = 'error';
-    tunnel.proc = null;
-    if (err.code === 'ENOENT') {
-      tunnel.error = "cloudflared não encontrado — instale ou verifique o PATH. Como alternativa, use ./compartilhar-enterprise.sh";
-    } else {
-      tunnel.error = `Erro ao iniciar cloudflared: ${err.message}`;
-    }
+    if (tunnel.proc !== proc) return; // processo já foi substituído / parado intencionalmente
     console.error('[tunnel] error:', err.message);
+    onTunnelDown(err.code === 'ENOENT'
+      ? 'cloudflared não encontrado — instale ou verifique o PATH.'
+      : `Erro ao iniciar cloudflared: ${err.message}`);
   });
 
   proc.on('exit', (code) => {
     if (tunnel.proc !== proc) return; // processo já foi substituído / parado intencionalmente
-    if (tunnel.status !== 'ready') {
-      tunnel.status = 'error';
-      tunnel.error = `cloudflared encerrou (código ${code}) antes de gerar a URL. Verifique se o cloudflared está instalado e tente novamente.`;
-    }
-    tunnel.proc = null;
     console.log(`[tunnel] processo encerrou, código ${code}`);
+    onTunnelDown(`cloudflared encerrou (código ${code}); religando automaticamente.`);
   });
 }
 
 /**
- * Para o túnel e zera o estado.
+ * Para o túnel e zera o estado. Só no shutdown do processo — a sessão acabar
+ * NÃO derruba o túnel (senão o anfitrião fica trancado para fora).
  */
 function stopTunnel() {
   const proc = tunnel.proc;
+  tunnel.stopping = true;
+  if (tunnel.retryTimer) { clearTimeout(tunnel.retryTimer); tunnel.retryTimer = null; }
   tunnel.proc = null;
   tunnel.url = null;
   tunnel.status = 'off';
   tunnel.error = null;
+  removeHostLink();
   if (proc) {
     try { proc.kill('SIGTERM'); } catch { /* ignorar */ }
     // Fallback: se não encerrar em 3s (shutdown gracioso travado), força SIGKILL
@@ -567,11 +649,31 @@ function handleInviteApi(req, res) {
   const url = new URL(req.url, 'http://x');
   const { pathname } = url;
 
-  if (!pathname.startsWith('/api/invite')) return false;
+  if (!pathname.startsWith('/api/invite') && !pathname.startsWith('/api/session')) return false;
 
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-store');
+
+  // Só o host (quem apresenta a chave no X-Host-Key) controla convite/sessão.
+  if (!isHostRequest(req)) {
+    res.writeHead(403);
+    res.end(JSON.stringify({ error: 'Forbidden' }));
+    return true;
+  }
+
+  if (req.method === 'POST' && pathname === '/api/session/end') {
+    endSession('host_ended');
+    res.writeHead(200);
+    res.end(JSON.stringify({ status: 'ended' }));
+    return true;
+  }
 
   if (req.method === 'POST' && pathname === '/api/invite/start') {
+    if (!session.active) { // sem sessão não há token de convite
+      res.writeHead(409);
+      res.end(JSON.stringify({ error: 'Sem sessão ativa' }));
+      return true;
+    }
     ensureTunnel();
     res.writeHead(200);
     res.end(JSON.stringify({ status: tunnel.status }));
@@ -582,16 +684,20 @@ function handleInviteApi(req, res) {
     res.writeHead(200);
     res.end(JSON.stringify({
       status: tunnel.status,
-      url: tunnel.url ?? undefined,
+      // O token da sessão viaja na URL (?k=): é o que autentica o convidado.
+      url: (tunnel.url && session.active) ? `${tunnel.url}/?k=${session.token}` : undefined,
       error: tunnel.error ?? undefined,
     }));
     return true;
   }
 
   if (req.method === 'POST' && pathname === '/api/invite/stop') {
-    stopTunnel();
+    // "Parar de compartilhar": o túnel segue de pé (o host entra por ele); o que
+    // muda é o token de convite — o link antigo não vale para novas conexões,
+    // quem já está conectado permanece.
+    if (session.active) session.token = newToken();
     res.writeHead(200);
-    res.end(JSON.stringify({ status: 'off' }));
+    res.end(JSON.stringify({ status: tunnel.status }));
     return true;
   }
 
@@ -599,6 +705,87 @@ function handleInviteApi(req, res) {
   res.writeHead(404);
   res.end(JSON.stringify({ error: 'Not found' }));
   return true;
+}
+
+// ─── Sessão = presença do host ────────────────────────────────────────────────
+// O processo e o túnel ficam de pé, mas NÃO guardam sessão: ela começa quando o
+// 1º WebSocket do host (com a chave) conecta e termina quando o último host
+// sumiu por SESSION_GRACE_MS (F5 do host não derruba), ou por parada explícita
+// (POST /api/session/end, SIGTERM/SIGINT). Ao terminar: avisa e derruba os
+// convidados, arquiva+limpa o chat e descarta o token de convite — o link
+// antigo nunca mais entra, e a próxima sessão gera outro. O túnel permanece.
+const SESSION_GRACE_MS = Number(process.env.SESSION_GRACE_MS) || 8000;
+const CLOSE_SESSION_END = 4400; // sessão encerrada pelo anfitrião (cliente NÃO reconecta)
+const CLOSE_INVALID     = 4401; // token ausente/errado ou sem sessão ativa (cliente NÃO reconecta)
+
+/** @type {{active:boolean, id:string|null, token:string|null, startedAt:number, endTimer:NodeJS.Timeout|null}} */
+const session = { active: false, id: null, token: null, startedAt: Date.now(), endTimer: null };
+/** WebSockets de host conectados (decidem a vida da sessão). */
+const hostSockets = new Set();
+
+/** Token de convite novo (192 bits). */
+function newToken() {
+  return crypto.randomBytes(24).toString('base64url');
+}
+
+/**
+ * Host = quem apresenta a chave do anfitrião: `?h=` na URL do upgrade do
+ * WebSocket, ou header `X-Host-Key` nas rotas HTTP. Só isso — origem de rede
+ * (loopback ou túnel) não conta; loopback sem chave é convidado comum.
+ * @param {http.IncomingMessage} req
+ */
+function isHostRequest(req) {
+  let given = req.headers['x-host-key'];
+  if (Array.isArray(given)) given = given[0];
+  if (!given) given = new URL(req.url, 'http://x').searchParams.get('h');
+  return hostKeyMatches(given);
+}
+
+/** Comparação em tempo constante (hash antes, para igualar tamanhos). */
+function tokenMatches(given) {
+  if (!session.active || !session.token || !given) return false;
+  const a = crypto.createHash('sha256').update(String(given)).digest();
+  const b = crypto.createHash('sha256').update(session.token).digest();
+  return crypto.timingSafeEqual(a, b);
+}
+
+function startSession() {
+  session.active = true;
+  session.token = newToken();
+  session.id = crypto.randomBytes(6).toString('hex');           // id público (não é o token)
+  session.startedAt = Date.now();
+  state.chat = { geral: [], dm: {} };
+  console.log(`[session] Iniciada ${session.id}`);
+}
+
+function endSession(reason = 'host_left') {
+  if (session.endTimer) { clearTimeout(session.endTimer); session.endTimer = null; }
+  if (!session.active) return;
+  session.active = false; // já recusa novos convidados daqui em diante
+  console.log(`[session] Encerrando ${session.id} (${reason})`);
+  // 1) avisa e derruba todos os sockets (convidados; host só em parada explícita)
+  const msg = JSON.stringify({ t: 'session_end', reason });
+  for (const ws of wss.clients) {
+    try {
+      if (ws.readyState === 1) ws.send(msg);
+      ws.close(CLOSE_SESSION_END, 'session_end');
+    } catch { /* socket já morto */ }
+  }
+  hostSockets.clear();
+  players.clear();
+  // 2) arquiva e limpa o chat (idempotente) — o túnel NÃO cai aqui
+  archiveSession();
+  state.chat = { geral: [], dm: {} };
+  // 3) descarta o token: sem sessão não há token válido
+  session.token = null;
+  session.id = null;
+}
+
+function hostSocketGone(ws) {
+  if (!hostSockets.delete(ws)) return;
+  if (hostSockets.size === 0 && session.active && !session.endTimer) {
+    session.endTimer = setTimeout(() => endSession('host_left'), SESSION_GRACE_MS);
+  }
 }
 
 // ─── Servidor HTTP (arquivos estáticos) ───────────────────────────────────────
@@ -678,11 +865,23 @@ wss.on('close', () => {
 wss.on('connection', (ws, req) => {
   let playerId = null;
 
-  // ── Detecção de host: acesso direto (localhost) vs. convidado (túnel Cloudflare) ──
-  // Convidados chegam pelo túnel e carregam headers cf-ray / cf-connecting-ip (e/ou
-  // x-forwarded-for). O host acessa diretamente: esses headers NÃO existem.
+  // ── Detecção de host: quem apresenta a chave do anfitrião (?h=) ──
   const hdrs = req.headers;
-  const isHost = !(hdrs['cf-ray'] || hdrs['cf-connecting-ip'] || hdrs['x-forwarded-for']);
+  const isHost = isHostRequest(req);
+
+  // ── Autenticação: host (chave válida) inicia/continua a sessão; convidado só
+  // com sessão ativa + token correto (?k=). Recusa = fecha com 4401, sem dados.
+  if (isHost) {
+    if (!session.active) startSession();
+    if (session.endTimer) { clearTimeout(session.endTimer); session.endTimer = null; }
+    hostSockets.add(ws);
+  } else {
+    const k = new URL(req.url, 'http://x').searchParams.get('k');
+    if (!tokenMatches(k)) {
+      ws.close(CLOSE_INVALID, 'invalid');
+      return;
+    }
+  }
 
   // Log das chaves de headers do upgrade (primeiro connect apenas, para diagnóstico)
   if (!wss._headerLogDone) {
@@ -695,6 +894,8 @@ wss.on('connection', (ws, req) => {
   ws._isHost = isHost;
 
   ws.isAlive = true;
+  // Id público da sessão: o cliente detecta troca de sessão numa reconexão e recarrega.
+  send(ws, { t: 'session', id: session.id });
   ws.on('pong', () => { ws.isAlive = true; });
 
   ws.on('message', (raw) => {
@@ -750,6 +951,7 @@ wss.on('connection', (ws, req) => {
   });
 
   ws.on('close', () => {
+    hostSocketGone(ws);
     if (!playerId) return;
     const player = players.get(playerId);
     players.delete(playerId);
@@ -764,16 +966,17 @@ wss.on('connection', (ws, req) => {
   });
 });
 
-server.listen(8080, () => {
-  console.log('[enterprise] Servidor rodando em http://localhost:8080');
-  console.log('[enterprise] WebSocket em ws://localhost:8080/ws');
+server.listen(PORT, () => {
+  console.log(`[enterprise] Servidor rodando em http://localhost:${PORT}`);
+  console.log(`[enterprise] WebSocket em ws://localhost:${PORT}/ws`);
+  ensureTunnel(); // túnel sempre ligado: o anfitrião também entra por ele
 });
 
-// ─── Encerramento limpo: mata o túnel se estiver rodando ─────────────────────
+// ─── Encerramento limpo: o túnel só cai aqui, junto com o processo ───────────
 function shutdown() {
-  archiveSession(); // arquiva a conversa desta sessão no SQLite antes de sair
+  endSession('server_stop'); // avisa convidados e arquiva o chat
   stopTunnel();
-  process.exit(0);
+  setTimeout(() => process.exit(0), 300); // dá tempo de os frames de close saírem
 }
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);

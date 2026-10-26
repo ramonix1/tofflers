@@ -5,9 +5,11 @@
  *  1. Clicar em "🔗 Convidar" → abre modal → consulta GET /api/invite
  *  2. Se status=off → dispara POST /api/invite/start → polling GET /api/invite (~1.5s)
  *  3. Quando ready → mostra URL + botão copiar
- *  4. Botão "Parar" → POST /api/invite/stop → volta ao estado inicial
+ *  4. Botão "Parar de compartilhar" → POST /api/invite/stop → gira o token (link antigo morre; o túnel segue)
  *  5. Se error → mostra mensagem e opção de retry
  */
+
+import { getHostKey } from './host-key.js';
 
 const POLL_INTERVAL_MS  = 1500;
 const POLL_TIMEOUT_MS   = 30_000;
@@ -58,7 +60,10 @@ function stopPolling() {
 // ── Fetch helpers ─────────────────────────────────────────────────────────────
 
 async function apiFetch(method, path) {
-  const res = await fetch(path, { method, headers: { 'Content-Type': 'application/json' } });
+  const headers = { 'Content-Type': 'application/json' };
+  const hostKey = getHostKey();
+  if (hostKey) headers['X-Host-Key'] = hostKey;
+  const res = await fetch(path, { method, headers });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   return res.json();
 }
@@ -155,13 +160,13 @@ stopBtn.addEventListener('click', async () => {
     await apiFetch('POST', '/api/invite/stop');
     showState('loading');
     // Volta ao estado off — não inicia novo túnel automaticamente
-    stateLoading.querySelector('.invite-status-text').textContent = 'Link encerrado.';
+    stateLoading.querySelector('.invite-status-text').textContent = 'Link antigo invalidado.';
     setTimeout(() => {
       stateLoading.querySelector('.invite-status-text').textContent = 'Gerando link seguro…';
       closeModal();
     }, 1200);
   } catch (err) {
-    showError(`Erro ao parar o túnel: ${err.message}`);
+    showError(`Erro ao parar de compartilhar: ${err.message}`);
   }
 });
 

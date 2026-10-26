@@ -26,6 +26,7 @@ import { DemandasPanel, showToast } from './demandas.js';
 import { SprintManager }            from './sprint.js';
 import { Net }                      from './net.js';
 import { RtcManager }               from './rtc.js';
+import { showSessionOverlay }       from './session-overlay.js';
 import { AUDIO_RADIUS, distance, gainForDistance } from './spatial.js';
 import { registerPlayerGetter }     from './mobile-controls.js';
 
@@ -116,7 +117,7 @@ let cameraMode = (() => {
 let debugOverlay = false;
 
 /**
- * Indica se o cliente atual é o host (acesso direto via localhost).
+ * Indica se o cliente atual é o host (apresentou a chave do anfitrião).
  * Recebido no welcome do servidor. Fail-closed: false por padrão.
  * @type {boolean}
  */
@@ -216,6 +217,18 @@ function initOptionsMenu() {
   const itemScreen = criarToggleItem('screen-toggle-btn', '🖥️', 'Compartilhar tela', false);
   itemScreen.addEventListener('click', () => rtc.toggleScreen());
   secMidia.appendChild(itemScreen);
+
+  const itemDiag = document.createElement('button');
+  itemDiag.id = 'rtc-diag-btn';
+  itemDiag.className = 'options-item';
+  itemDiag.textContent = '🩺 Diagnóstico de vídeo';
+  itemDiag.title = 'Coleta dados da conexão de vídeo (~3 s) e copia para enviar ao suporte';
+  itemDiag.addEventListener('click', async () => {
+    fecharMenu();
+    showToast('Coletando diagnóstico de vídeo (~3 s)…');
+    await rtc.runDiagnostic({ isHost: _isHost, participants: remotePlayers.size + 1 });
+  });
+  secMidia.appendChild(itemDiag);
 
   panel.appendChild(secMidia);
 
@@ -742,6 +755,16 @@ initMediaDock();
 })();
 
 net.onSignal = (from, data) => rtc.handleSignal(from, data);
+
+// Sessão encerrada pelo host (ou link inválido): derruba mídia/peers e bloqueia a tela.
+// Sem reconexão (ver net.js). Usa só o teardown existente do RtcManager.
+net.onSessionEnd = (reason) => {
+  try {
+    rtc.closeAll();
+    for (const kind of ['mic', 'cam', 'screen']) if (rtc.local[kind]) rtc._stopKind(kind);
+  } catch (e) { console.warn('[session] teardown de mídia falhou:', e); }
+  showSessionOverlay(reason, _isHost);
+};
 
 // ── Relógio ───────────────────────────────────────────────────────────────────
 
